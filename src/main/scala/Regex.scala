@@ -12,7 +12,7 @@ class Regex {
 
   def toDFA: DFA = {
     this match {
-      case *(regex) => regex.toDFA.star 
+      case *(regex) => regex.toDFA.star
       case U(regex1, regex2) => regex1.toDFA union regex2.toDFA
       case o(regex1, regex2) => regex1.toDFA concat regex2.toDFA 
       case Set(strings)=> {
