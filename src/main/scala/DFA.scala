@@ -2,26 +2,27 @@ package com.austinyoung.dfaregex
 
 import scala.collection.mutable.{Map, SynchronizedMap, HashMap}
 
-def uni(l: List[Char], t: List[Char]) = {
-  var list = l
-  var map = new HashMap[Char, Int]
-  for (char <- l) {
-    map.put(char, 1)
-  }
-
-  for (char <- t) {
-    if (map.get(char) == None) {
-      list = char :: list
+package object util {
+  def uni(l: List[Char], t: List[Char]) = {
+    var list = l
+    var map = new HashMap[Char, Int]
+    for (char <- l) {
       map.put(char, 1)
     }
+
+    for (char <- t) {
+      if (map.get(char) == None) {
+        list = char :: list
+        map.put(char, 1)
+      }
+    }
+    list
   }
-  list
+  type DFAMachine = Array[HashMap[Char, Int]]
+  type NFAMachine = Array[HashMap[Char, List[Int]]]
 }
 
-type DFAMachine = Array[HashMap[Char, Int]]
-type NFAMachine = Array[HashMap[Char, List[Int]]]
-
-class DFA(m: DFAMachine, a: List[Char], t: Array[Boolean]) {
+class DFA(m: util.DFAMachine, a: List[Char], t: Array[Boolean]) {
   var machine = m
   var alph = a
   var accept = t
@@ -78,8 +79,8 @@ class DFA(m: DFAMachine, a: List[Char], t: Array[Boolean]) {
     var mapToState = this.mapToState(dfa.size)
     var mapToPair = this.mapToPair(dfa.size)
 
-    var alphCombine = uni(this.alph, dfa.alph)
-    var machineCombine = new DFAMachine(this.size * dfa.size)
+    var alphCombine = util.uni(this.alph, dfa.alph)
+    var machineCombine = new util.DFAMachine(this.size * dfa.size)
     var acceptCombine = new Array[Boolean](this.size * dfa.size)
     for (i <- 0 to ((this.size * dfa.size) - 1)) {
       var map = new HashMap[Char, Int]
@@ -107,17 +108,3 @@ class DFA(m: DFAMachine, a: List[Char], t: Array[Boolean]) {
   def toNFA = {}
 
 }
-
- class NFA(m: NFAMachine, a: List[Char], t: Array[Boolean], e: Array[List[Int]]) {
-   var machine = m
-   var alph = a
-   var accept = t
-   var eps = e
-
-   def toDFA = {}
-   
-   def toRegex = {}
-}
-
-
-
