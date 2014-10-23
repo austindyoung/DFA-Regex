@@ -1,10 +1,12 @@
 package com.austinyoung.dfaregex
 
 import org.scalatest.FunSpec
+import scala.collection.mutable.{Map, SynchronizedMap, HashMap}
 
 class DFASpec extends FunSpec {
   describe("Same number of zeros and ones DFA") {
     it("Check that the same number of zeros and ones are given.") {
+      // TODO(@IvanMalison) What is this test doing
       var zero = new HashMap[Char, Int]
       var one = new HashMap[Char, Int]
       zero.put('0', 1)
@@ -27,6 +29,7 @@ class DFASpec extends FunSpec {
       machine1(0) = zero1
       machine1(1) = one1
       var alph = List('0', '1')
+      // TODO(@IvanMalison) Add assertions.
     }
   }
 }
