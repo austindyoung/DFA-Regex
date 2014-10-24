@@ -1,6 +1,7 @@
 package com.austinyoung.dfaregex
 
 import scala.collection._
+import scala.collection.immutable
 
 case class MissingTransition(smth: String) extends Exception
 case class UnrecognizedElement(smth: String) extends Exception
@@ -31,10 +32,22 @@ case class TransitionMapDFAState[AlphabetType](
     }
 }
 
-case class DFA[AlphabetType](
-    startState: DFAState[AlphabetType],
-    states: Iterable[DFAState[AlphabetType]],
-    alphabet: Iterable[AlphabetType]) {
+class DFA[AlphabetType](
+    val startState: DFAState[AlphabetType],
+    _states: Iterable[DFAState[AlphabetType]],
+    _alphabet: Iterable[AlphabetType]) {
+
+  val alphabet = immutable.HashSet[AlphabetType]() ++ _alphabet
+  val states = immutable.HashSet[DFAState[AlphabetType]]() ++ _states
+
+  states.foreach((state: DFAState[AlphabetType]) => {
+    assert(state.transitionMap.keySet == alphabet);
+    // TODO(@IvanMalison) Why does this cause union to fail?
+    // state.transitionMap.foreach({
+    //   case (_, mappedState: DFAState[AlphabetType]) =>
+    //     assert(states(mappedState))
+    // })
+  })
 
   def evaluate(word: Seq[AlphabetType]) = {
     word.foldLeft(startState)(
@@ -53,9 +66,7 @@ case class DFA[AlphabetType](
 }
 
 
-class DFACombiner[AlphabetType](
-    left: DFA[AlphabetType],
-    right: DFA[AlphabetType],
+class DFACombiner[AlphabetType](left: DFA[AlphabetType], right: DFA[AlphabetType],
     operation: (Boolean, Boolean) => Boolean) {
 
   type State = DFAState[AlphabetType]
@@ -68,13 +79,13 @@ class DFACombiner[AlphabetType](
     mutable.HashMap[(State, State), State]()
 
   def combine(): DFA[AlphabetType] = {
-    val newStates = left.states.flatMap(
-      (leftState: State) => right.states.map(
+    val newStates = (left.states ++ List(leftUnrecognized)).flatMap(
+      (leftState: State) => (right.states ++ List(rightUnrecognized)).map(
         (rightState: State) => getState(leftState, rightState)))
-    DFA(
+    new DFA(
       getState(left.startState, right.startState),
       newStates,
-      left.alphabet)
+      left.alphabet ++ right.alphabet)
 
   }
 

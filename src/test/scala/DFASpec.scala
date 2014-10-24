@@ -16,7 +16,7 @@ class DFASpec extends FunSpec {
       1 -> zerosOdd),
     false)
 
-  val evenZerosDFA = DFA(zerosEven, List(zerosEven, zerosOdd), List(0, 1))
+  val evenZerosDFA = new DFA(zerosEven, List(zerosEven, zerosOdd), List(0, 1))
 
   lazy val onesEven: DFAState[Int] = new TransitionMapDFAState[Int](
       () => Map(
@@ -29,7 +29,7 @@ class DFASpec extends FunSpec {
       1 -> onesEven),
     false)
 
-  val evenOnesDFA = DFA(onesEven, List(onesEven, onesOdd), List(0, 1))
+  val evenOnesDFA = new DFA(onesEven, List(onesEven, onesOdd), List(0, 1))
 
   lazy val over = LoopDFAState[Int](false, List(0, 1))
 
@@ -51,9 +51,9 @@ class DFASpec extends FunSpec {
       1 -> lastWasOne),
     true)
 
-  val noConsecutive = DFA(
+  val noConsecutive = new DFA(
     noConsecutiveStart,
-    List(noConsecutiveStart, lastWasZero, lastWasOne),
+    List(noConsecutiveStart, lastWasZero, lastWasOne, over),
     List(0, 1))
 
   describe("Same number of zeros and ones DFA") {
@@ -97,7 +97,6 @@ class DFASpec extends FunSpec {
       assert(anyCondition.evaluate(List(1, 1, 0)) == true)
       assert(anyCondition.evaluate(List(1, 0)) == true)
     }
-
   }
 }
 
