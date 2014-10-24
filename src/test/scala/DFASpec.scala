@@ -31,16 +31,18 @@ class DFASpec extends FunSpec {
 
   val evenOnesDFA = DFA(onesEven, List(onesEven, onesOdd), List(0, 1))
 
+  lazy val over = LoopDFAState[Int](false, List(0, 1))
+
   lazy val lastWasZero = new TransitionMapDFAState[Int](
     () => Map(
-      0 -> LoopDFAState[Int](false),
+      0 -> over,
       1 -> lastWasOne),
     true)
 
   lazy val lastWasOne: DFAState[Int] = new TransitionMapDFAState[Int](
     () => Map(
       0 -> lastWasZero,
-      1 -> LoopDFAState[Int](false)),
+      1 -> over),
     true)
 
   val noConsecutiveStart = new TransitionMapDFAState[Int](
@@ -67,6 +69,7 @@ class DFASpec extends FunSpec {
     }
   }
   describe("DFA") {
+
     it("supports unions") {
       val bothEvenDFA = evenZerosDFA.union(evenOnesDFA)
       assert(bothEvenDFA.evaluate(List(0, 1, 0, 1)) == true)
@@ -74,11 +77,27 @@ class DFASpec extends FunSpec {
       assert(bothEvenDFA.evaluate(List(0, 1, 0, 1, 0)) == false)
       assert(bothEvenDFA.evaluate(List(0, 1, 0, 1, 1)) == false)
 
-      // val noConsecutiveAndAllEven = bothEvenDFA.union(noConsecutive)
-      // assert(noConsecutiveAndAllEven.evaluate(List(0, 1, 0, 1)) == true)
-      // assert(noConsecutiveAndAllEven.evaluate(List(0, 1, 0, 1, 1, 1)) == false)
-      // assert(noConsecutiveAndAllEven.evaluate(List(1, 0, 1, 0, 1, 0, 1, 0)) == true)
+      val noConsecutiveAndAllEven = bothEvenDFA.union(noConsecutive)
+      assert(noConsecutiveAndAllEven.evaluate(List(0, 1, 0, 1)) == true)
+      assert(noConsecutiveAndAllEven.evaluate(List(0, 1, 0, 1, 1, 1)) == false)
     }
+
+    it("supports intersection") {
+      val eitherEvenDFA = evenZerosDFA.intersect(evenOnesDFA)
+      assert(eitherEvenDFA.evaluate(List(0, 1, 0, 1)) == true)
+      assert(eitherEvenDFA.evaluate(List(0, 1, 0, 1, 1)) == true)
+      assert(eitherEvenDFA.evaluate(List(0, 1, 0, 1, 1, 0)) == false)
+
+      val noConsecutiveAndEitherEven = eitherEvenDFA.union(noConsecutive)
+      assert(noConsecutiveAndEitherEven.evaluate(List(1, 0)) == false)
+      assert(noConsecutiveAndEitherEven.evaluate(List(1, 0, 1)) == true)
+      assert(noConsecutiveAndEitherEven.evaluate(List(1, 0, 0, 1)) == false)
+
+      val anyCondition = eitherEvenDFA.intersect(noConsecutive)
+      assert(anyCondition.evaluate(List(1, 1, 0)) == true)
+      assert(anyCondition.evaluate(List(1, 0)) == true)
+    }
+
   }
 }
 

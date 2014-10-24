@@ -3,6 +3,7 @@ package com.austinyoung.dfaregex
 import scala.collection._
 
 case class MissingTransition(smth: String) extends Exception
+case class UnrecognizedElement(smth: String) extends Exception
 
 abstract class DFAState[AlphabetType] {
   def transition(alphabetMember: AlphabetType): DFAState[AlphabetType]
@@ -10,10 +11,12 @@ abstract class DFAState[AlphabetType] {
   def transitionMap: Map[AlphabetType, DFAState[AlphabetType]]
 }
 
-case class LoopDFAState[AlphabetType](isAcceptState: Boolean)
-    extends DFAState[AlphabetType] {
+case class LoopDFAState[AlphabetType](
+    isAcceptState: Boolean,
+    alphabet: Iterable[AlphabetType]) extends DFAState[AlphabetType] {
   def transition(alphabetMember: AlphabetType) = this
-  val transitionMap = Map[AlphabetType, DFAState[AlphabetType]]()
+  val transitionMap = alphabet.map((alphabetElem: AlphabetType) =>
+    (alphabetElem, this)).toMap
 }
 
 case class TransitionMapDFAState[AlphabetType](
@@ -23,7 +26,8 @@ case class TransitionMapDFAState[AlphabetType](
   def transition(alphabetMember: AlphabetType): DFAState[AlphabetType] = 
     this.transitionMap get alphabetMember match {
       case Some(dfaState) => dfaState
-      case None => new LoopDFAState[AlphabetType](false)
+      case None => throw UnrecognizedElement(
+        "The provided transition element was not recognized.")
     }
 }
 
@@ -31,6 +35,7 @@ case class DFA[AlphabetType](
     startState: DFAState[AlphabetType],
     states: Iterable[DFAState[AlphabetType]],
     alphabet: Iterable[AlphabetType]) {
+
   def evaluate(word: Seq[AlphabetType]) = {
     word.foldLeft(startState)(
       (currentState: DFAState[AlphabetType], elem: AlphabetType) => {
@@ -38,9 +43,11 @@ case class DFA[AlphabetType](
     }).isAcceptState
   }
 
-  def union(that: DFA[AlphabetType]) = combine(that, (left: Boolean, right: Boolean) => left && right)
+  def union = combine((left: Boolean, right: Boolean) => left && right)_
 
-  def combine(that: DFA[AlphabetType], operation: (Boolean, Boolean) => Boolean) = {
+  def intersect = combine((left: Boolean, right: Boolean) => left || right)_
+
+  def combine(operation: (Boolean, Boolean) => Boolean)(that: DFA[AlphabetType]) = {
     new DFACombiner(this, that, operation).combine
   }
 }
@@ -51,11 +58,19 @@ class DFACombiner[AlphabetType](
     right: DFA[AlphabetType],
     operation: (Boolean, Boolean) => Boolean) {
 
-  private val stateCache: mutable.Map[(DFAState[AlphabetType], DFAState[AlphabetType]), DFAState[AlphabetType]] = mutable.HashMap[(DFAState[AlphabetType], DFAState[AlphabetType]), DFAState[AlphabetType]]()
+  type State = DFAState[AlphabetType]
+
+  lazy val combinedAlphabets = left.alphabet ++ right.alphabet
+  lazy val rightUnrecognized = LoopDFAState[AlphabetType](false, right.alphabet)
+  lazy val leftUnrecognized = LoopDFAState[AlphabetType](false, left.alphabet)
+
+  private val stateCache: mutable.Map[(State, State), State] =
+    mutable.HashMap[(State, State), State]()
+
   def combine(): DFA[AlphabetType] = {
     val newStates = left.states.flatMap(
-      (leftState: DFAState[AlphabetType]) => right.states.map(
-        (rightState: DFAState[AlphabetType]) => getState(leftState, rightState)))
+      (leftState: State) => right.states.map(
+        (rightState: State) => getState(leftState, rightState)))
     DFA(
       getState(left.startState, right.startState),
       newStates,
@@ -63,31 +78,31 @@ class DFACombiner[AlphabetType](
 
   }
 
-  def getState(
-      leftState: DFAState[AlphabetType],
-      rightState: DFAState[AlphabetType]): DFAState[AlphabetType] = {
+  def getState(leftState: State, rightState: State): State = {
     stateCache get (leftState, rightState) match {
       case Some(mappedState) => mappedState
       case None => {
         val newState = buildState(leftState, rightState)
-        stateCache.put((leftState, rightState), buildState(leftState, rightState))
+        stateCache.put((leftState, rightState),
+          buildState(leftState, rightState))
         newState
       }
     }
   }
 
-  def buildState(
-      leftState: DFAState[AlphabetType],
-      rightState: DFAState[AlphabetType]): DFAState[AlphabetType] = {
+  def buildState(leftState: State, rightState: State): State = {
     TransitionMapDFAState[AlphabetType](
-      () => leftState.transitionMap.map(
-        {case (alphabetMember, newLeftState) => {
-          rightState.transitionMap.get(alphabetMember) match {
-            case Some(newRightState) => (alphabetMember, this.getState(newLeftState, newRightState))
-            case None => throw MissingTransition(s"Attempted to combine states with different transition alphabets. $alphabetMember was not present.")
-          }
-        }}
-      ).toMap,
+      () => combinedAlphabets.map((alphabetElem: AlphabetType) => {
+        val newLeftState = leftState.transitionMap.get(alphabetElem) match {
+          case Some(newState) => newState
+          case None => leftUnrecognized
+        }
+        val newRightState = rightState.transitionMap.get(alphabetElem) match {
+          case Some(newState) => newState
+          case None => rightUnrecognized
+        }
+        (alphabetElem, this.getState(newLeftState, newRightState))
+      }).toMap,
       this.operation(leftState.isAcceptState, rightState.isAcceptState)
     )
   }
