@@ -6,55 +6,40 @@ import org.scalatest.BeforeAndAfter
 class DFASpec extends FunSpec {
 
   lazy val zerosEven: DFAState[Int] = new TransitionMapDFAState[Int](
-    () => Map(
-      0 -> zerosOdd,
-      1 -> zerosEven),
+    () => Map(0 -> zerosOdd, 1 -> zerosEven),
     true)
   lazy val zerosOdd: DFAState[Int] = new TransitionMapDFAState[Int](
-    () => Map(
-      0 -> zerosEven,
-      1 -> zerosOdd),
+    () => Map(0 -> zerosEven, 1 -> zerosOdd),
     false)
 
-  val evenZerosDFA = new DFA(zerosEven, List(zerosEven, zerosOdd), List(0, 1))
+  val evenZerosDFA = new DFA(zerosEven, List(zerosEven, zerosOdd))
 
   lazy val onesEven: DFAState[Int] = new TransitionMapDFAState[Int](
-      () => Map(
-        0 -> onesEven,
-        1 -> onesOdd),
-      true)
+    () => Map(0 -> onesEven, 1 -> onesOdd),
+    true)
   lazy val onesOdd: DFAState[Int] = new TransitionMapDFAState[Int](
-    () => Map(
-      0 -> onesOdd,
-      1 -> onesEven),
+    () => Map(0 -> onesOdd, 1 -> onesEven),
     false)
 
-  val evenOnesDFA = new DFA(onesEven, List(onesEven, onesOdd), List(0, 1))
+  val evenOnesDFA = new DFA(onesEven, List(onesEven, onesOdd))
 
   lazy val over = LoopDFAState[Int](false, List(0, 1))
 
   lazy val lastWasZero = new TransitionMapDFAState[Int](
-    () => Map(
-      0 -> over,
-      1 -> lastWasOne),
+    () => Map(0 -> over, 1 -> lastWasOne),
     true)
 
   lazy val lastWasOne: DFAState[Int] = new TransitionMapDFAState[Int](
-    () => Map(
-      0 -> lastWasZero,
-      1 -> over),
+    () => Map(0 -> lastWasZero, 1 -> over),
     true)
 
   val noConsecutiveStart = new TransitionMapDFAState[Int](
-    () => Map(
-      0 -> lastWasZero,
-      1 -> lastWasOne),
+    () => Map(0 -> lastWasZero, 1 -> lastWasOne),
     true)
 
   val noConsecutive = new DFA(
     noConsecutiveStart,
-    List(noConsecutiveStart, lastWasZero, lastWasOne, over),
-    List(0, 1))
+    List(noConsecutiveStart, lastWasZero, lastWasOne, over))
 
   describe("Same number of zeros and ones DFA") {
 

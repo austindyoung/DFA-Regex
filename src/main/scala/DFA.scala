@@ -35,9 +35,12 @@ case class TransitionMapDFAState[AlphabetType](
 class DFA[AlphabetType](
     val startState: DFAState[AlphabetType],
     _states: Iterable[DFAState[AlphabetType]],
-    _alphabet: Iterable[AlphabetType]) {
+    _alphabet: Option[Iterable[AlphabetType]] = None) {
 
-  val alphabet = immutable.HashSet[AlphabetType]() ++ _alphabet
+  val alphabet = immutable.HashSet[AlphabetType]() ++ (_alphabet match {
+    case Some(alphabet) => alphabet: Iterable[AlphabetType]
+    case None => startState.transitionMap.keys
+  })
   val states = immutable.HashSet[DFAState[AlphabetType]]() ++ _states
 
   states.foreach((state: DFAState[AlphabetType]) => {
@@ -60,13 +63,15 @@ class DFA[AlphabetType](
 
   def intersect = combine((left: Boolean, right: Boolean) => left || right)_
 
-  def combine(operation: (Boolean, Boolean) => Boolean)(that: DFA[AlphabetType]) = {
-    new DFACombiner(this, that, operation).combine
+  def combine(op: (Boolean, Boolean) => Boolean)(that: DFA[AlphabetType]) = {
+    new DFACombiner(this, that, op).combine
   }
 }
 
 
-class DFACombiner[AlphabetType](left: DFA[AlphabetType], right: DFA[AlphabetType],
+class DFACombiner[AlphabetType](
+    left: DFA[AlphabetType],
+    right: DFA[AlphabetType],
     operation: (Boolean, Boolean) => Boolean) {
 
   type State = DFAState[AlphabetType]
@@ -85,7 +90,7 @@ class DFACombiner[AlphabetType](left: DFA[AlphabetType], right: DFA[AlphabetType
     new DFA(
       getState(left.startState, right.startState),
       newStates,
-      left.alphabet ++ right.alphabet)
+      Some(left.alphabet ++ right.alphabet))
 
   }
 
