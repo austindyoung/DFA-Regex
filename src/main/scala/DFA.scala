@@ -1,110 +1,94 @@
 package com.austinyoung.dfaregex
 
-import scala.collection.mutable.{Map, SynchronizedMap, HashMap}
+import scala.collection._
 
-package object util {
-  def uni(l: List[Char], t: List[Char]) = {
-    var list = l
-    var map = new HashMap[Char, Int]
-    for (char <- l) {
-      map.put(char, 1)
-    }
+case class MissingTransition(smth: String) extends Exception
 
-    for (char <- t) {
-      if (map.get(char) == None) {
-        list = char :: list
-        map.put(char, 1)
-      }
-    }
-    list
-  }
-  type DFAMachine = Array[HashMap[Char, Int]]
-  type NFAMachine = Array[HashMap[Char, List[Int]]]
+abstract class DFAState[AlphabetType] {
+  def transition(alphabetMember: AlphabetType): DFAState[AlphabetType]
+  def isAcceptState: Boolean
+  def transitionMap: Map[AlphabetType, DFAState[AlphabetType]]
 }
 
-class DFA(m: util.DFAMachine, a: List[Char], t: Array[Boolean]) {
-  var machine = m
-  var alph = a
-  var accept = t
+case class LoopDFAState[AlphabetType](isAcceptState: Boolean)
+    extends DFAState[AlphabetType] {
+  def transition(alphabetMember: AlphabetType) = this
+  val transitionMap = Map[AlphabetType, DFAState[AlphabetType]]()
+}
 
-  def size = {
-    this.machine.size
-  }
-
-  def eval(string: String) = {
-    var current = 0
-    var sList = string.toList
-    while (sList != Nil) {
-      current = this.machine(current).get(sList.head).get
-      sList = sList.tail
+case class TransitionMapDFAState[AlphabetType](
+    transitionMapFunction: () => Map[AlphabetType, DFAState[AlphabetType]],
+    isAcceptState: Boolean) extends DFAState[AlphabetType] {
+  lazy val transitionMap = transitionMapFunction()
+  def transition(alphabetMember: AlphabetType): DFAState[AlphabetType] = 
+    this.transitionMap get alphabetMember match {
+      case Some(dfaState) => dfaState
+      case None => new LoopDFAState[AlphabetType](false)
     }
-    this.accept(current)
+}
+
+case class DFA[AlphabetType](
+    startState: DFAState[AlphabetType],
+    states: Iterable[DFAState[AlphabetType]],
+    alphabet: Iterable[AlphabetType]) {
+  def evaluate(word: Seq[AlphabetType]) = {
+    word.foldLeft(startState)(
+      (currentState: DFAState[AlphabetType], elem: AlphabetType) => {
+      currentState.transition(elem)
+    }).isAcceptState
   }
 
-  def mapToState(size: Int) = {
-    var i = 0
-    var j = 0
-    var k = 0
-    var map = new HashMap[(Int, Int), Int]
-    while (j < size) {
-      while (i < this.size) {
-        map.put((i, j), k)
-        i = i + 1
-        k = k + 1
+  def union(that: DFA[AlphabetType]) = combine(that, (left: Boolean, right: Boolean) => left && right)
+
+  def combine(that: DFA[AlphabetType], operation: (Boolean, Boolean) => Boolean) = {
+    new DFACombiner(this, that, operation).combine
+  }
+}
+
+
+class DFACombiner[AlphabetType](
+    left: DFA[AlphabetType],
+    right: DFA[AlphabetType],
+    operation: (Boolean, Boolean) => Boolean) {
+
+  private val stateCache: mutable.Map[(DFAState[AlphabetType], DFAState[AlphabetType]), DFAState[AlphabetType]] = mutable.HashMap[(DFAState[AlphabetType], DFAState[AlphabetType]), DFAState[AlphabetType]]()
+  def combine(): DFA[AlphabetType] = {
+    val newStates = left.states.flatMap(
+      (leftState: DFAState[AlphabetType]) => right.states.map(
+        (rightState: DFAState[AlphabetType]) => getState(leftState, rightState)))
+    DFA(
+      getState(left.startState, right.startState),
+      newStates,
+      left.alphabet)
+
+  }
+
+  def getState(
+      leftState: DFAState[AlphabetType],
+      rightState: DFAState[AlphabetType]): DFAState[AlphabetType] = {
+    stateCache get (leftState, rightState) match {
+      case Some(mappedState) => mappedState
+      case None => {
+        val newState = buildState(leftState, rightState)
+        stateCache.put((leftState, rightState), buildState(leftState, rightState))
+        newState
       }
-      i = 0
-      j = j + 1
     }
-    map
   }
 
-  def mapToPair(size: Int) = {
-    var i = 0
-    var j = 0
-    var k = 0
-    var map = new Array[(Int, Int)](this.size * size)
-    while (j < size) {
-      while (i < this.machine.size) {
-        map(k) = (i, j)
-        i = i + 1
-        k = k + 1
-      }
-      i = 0
-      j = j + 1
-    }
-    map
+  def buildState(
+      leftState: DFAState[AlphabetType],
+      rightState: DFAState[AlphabetType]): DFAState[AlphabetType] = {
+    TransitionMapDFAState[AlphabetType](
+      () => leftState.transitionMap.map(
+        {case (alphabetMember, newLeftState) => {
+          rightState.transitionMap.get(alphabetMember) match {
+            case Some(newRightState) => (alphabetMember, this.getState(newLeftState, newRightState))
+            case None => throw MissingTransition(s"Attempted to combine states with different transition alphabets. $alphabetMember was not present.")
+          }
+        }}
+      ).toMap,
+      this.operation(leftState.isAcceptState, rightState.isAcceptState)
+    )
   }
-
-  def combine(dfa: DFA, op: (Boolean, Boolean) => Boolean): DFA = {
-    var mapToState = this.mapToState(dfa.size)
-    var mapToPair = this.mapToPair(dfa.size)
-
-    var alphCombine = util.uni(this.alph, dfa.alph)
-    var machineCombine = new util.DFAMachine(this.size * dfa.size)
-    var acceptCombine = new Array[Boolean](this.size * dfa.size)
-    for (i <- 0 to ((this.size * dfa.size) - 1)) {
-      var map = new HashMap[Char, Int]
-      for (char <- alphCombine) {
-        var thisState = (this.machine(mapToPair(i)._1).get(char)).get
-        var dfaState = (dfa.machine(mapToPair(i)._2).get(char)).get
-        map.put(char, (mapToState.get((thisState, dfaState))).get)
-      }
-      machineCombine(i) = map
-      acceptCombine(i) = (this.accept(mapToPair(i)._1) || dfa.accept(mapToPair(i)._2))
-    }
-    new DFA(machineCombine, alphCombine, acceptCombine)
-  }
-
-  def union(dfa: DFA) = {
-    this.combine(dfa, (p: Boolean, q: Boolean) => (p || q))
-  }
-
-  def concat(dfa: DFA) = {}
-
-  def star(dfa: DFA) = {}
-
-  def toRegex = {}
-
-  def toNFA = {}
-
 }
