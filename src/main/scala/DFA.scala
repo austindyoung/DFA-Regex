@@ -59,9 +59,9 @@ class DFA[AlphabetType](
     }).isAcceptState
   }
 
-  def union = combine((left: Boolean, right: Boolean) => left && right)_
+  def union = combine((left: Boolean, right: Boolean) => left || right)_
 
-  def intersect = combine((left: Boolean, right: Boolean) => left || right)_
+  def intersect = combine((left: Boolean, right: Boolean) => left && right)_
 
   def combine(op: (Boolean, Boolean) => Boolean)(that: DFA[AlphabetType]) = {
     new DFACombiner(this, that, op).combine
