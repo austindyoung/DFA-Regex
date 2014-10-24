@@ -1,35 +1,83 @@
 package com.austinyoung.dfaregex
 
 import org.scalatest.FunSpec
-import scala.collection.mutable.{Map, SynchronizedMap, HashMap}
+import org.scalatest.BeforeAndAfter
 
 class DFASpec extends FunSpec {
+
+  lazy val zerosEven: DFAState[Int] = new TransitionMapDFAState[Int](
+    () => Map(
+      0 -> zerosOdd,
+      1 -> zerosEven),
+    true)
+  lazy val zerosOdd: DFAState[Int] = new TransitionMapDFAState[Int](
+    () => Map(
+      0 -> zerosEven,
+      1 -> zerosOdd),
+    false)
+
+  val evenZerosDFA = DFA(zerosEven, List(zerosEven, zerosOdd), List(0, 1))
+
+  lazy val onesEven: DFAState[Int] = new TransitionMapDFAState[Int](
+      () => Map(
+        0 -> onesEven,
+        1 -> onesOdd),
+      true)
+  lazy val onesOdd: DFAState[Int] = new TransitionMapDFAState[Int](
+    () => Map(
+      0 -> onesOdd,
+      1 -> onesEven),
+    false)
+
+  val evenOnesDFA = DFA(onesEven, List(onesEven, onesOdd), List(0, 1))
+
+  lazy val lastWasZero = new TransitionMapDFAState[Int](
+    () => Map(
+      0 -> LoopDFAState[Int](false),
+      1 -> lastWasOne),
+    true)
+
+  lazy val lastWasOne: DFAState[Int] = new TransitionMapDFAState[Int](
+    () => Map(
+      0 -> lastWasZero,
+      1 -> LoopDFAState[Int](false)),
+    true)
+
+  val noConsecutiveStart = new TransitionMapDFAState[Int](
+    () => Map(
+      0 -> lastWasZero,
+      1 -> lastWasOne),
+    true)
+
+  val noConsecutive = DFA(
+    noConsecutiveStart,
+    List(noConsecutiveStart, lastWasZero, lastWasOne),
+    List(0, 1))
+
   describe("Same number of zeros and ones DFA") {
-    it("Check that the same number of zeros and ones are given.") {
-      // TODO(@IvanMalison) What is this test doing
-      var zero = new HashMap[Char, Int]
-      var one = new HashMap[Char, Int]
-      zero.put('0', 1)
-      zero.put('1', 0)
-      one.put('0', 0)
-      one.put('1', 1)
-      var accept = new Array[Boolean](2)
-      accept(0) = true
-      accept(1) = false
-      var machine = new Array[HashMap[Char, Int]](2)
-      machine(0) = zero
-      machine(1) = one
-      var zero1 = new HashMap[Char, Int]
-      var one1 = new HashMap[Char, Int]
-      zero1.put('0', 0)
-      zero1.put('1', 1)
-      one1.put('0', 1)
-      one1.put('1', 0)
-      var machine1 = new Array[HashMap[Char, Int]](2)
-      machine1(0) = zero1
-      machine1(1) = one1
-      var alph = List('0', '1')
-      // TODO(@IvanMalison) Add assertions.
+
+    it("accepts strings with an even number of zeros.") {
+      assert(zerosEven.transition(0) == zerosOdd)
+      assert(zerosEven.transition(0).transition(0) == zerosEven)
+      assert(evenZerosDFA.evaluate(List(0, 0)) == true)
+      assert(evenZerosDFA.evaluate(List(0, 1, 0, 1, 0)) == false)
+      assert(evenOnesDFA.evaluate(List(0, 1, 0, 1, 0)) == true)
+      assert(evenOnesDFA.evaluate(List(0, 1, 0, 1, 1)) == false)
+      assert(evenOnesDFA.evaluate(List(0, 1, 0, 1, 1, 1)) == true)
+    }
+  }
+  describe("DFA") {
+    it("supports unions") {
+      val bothEvenDFA = evenZerosDFA.union(evenOnesDFA)
+      assert(bothEvenDFA.evaluate(List(0, 1, 0, 1)) == true)
+      assert(bothEvenDFA.evaluate(List(0, 1, 0, 1, 1, 0)) == false)
+      assert(bothEvenDFA.evaluate(List(0, 1, 0, 1, 0)) == false)
+      assert(bothEvenDFA.evaluate(List(0, 1, 0, 1, 1)) == false)
+
+      // val noConsecutiveAndAllEven = bothEvenDFA.union(noConsecutive)
+      // assert(noConsecutiveAndAllEven.evaluate(List(0, 1, 0, 1)) == true)
+      // assert(noConsecutiveAndAllEven.evaluate(List(0, 1, 0, 1, 1, 1)) == false)
+      // assert(noConsecutiveAndAllEven.evaluate(List(1, 0, 1, 0, 1, 0, 1, 0)) == true)
     }
   }
 }
