@@ -29,6 +29,12 @@ class NFA[T](
   def toDFA = {
     new NFAToDFA(this).DFA
   }
+
+  def concatenate(that: NFA[T]) = {
+    val (acceptStates, otherStates) = states.partition((state) =>
+      state.isAcceptState)
+
+  }
 }
 
 class NFAToDFA[T](nfa: NFA[T]) {
