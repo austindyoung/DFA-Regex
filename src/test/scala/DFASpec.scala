@@ -82,6 +82,10 @@ class DFASpec extends FunSpec {
       assert(anyCondition.evaluate(List(1, 0)))
     }
 
+    it("supports concatenation") {
+      
+    }
+
     it("supports kleene*") {
       lazy val done = TransitionMapDFAState[Int](
         () => Map(0 -> over, 1 -> over),
@@ -103,7 +107,6 @@ class DFASpec extends FunSpec {
       assert(!oneOhOne.evaluate(List(1, 0, 1, 1)))
 
       //assert(oneOhOne.kleene.evaluate(List(1, 0, 1, 1, 0, 1, 1, 0, 1)))
-
     }
   }
 }

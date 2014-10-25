@@ -45,11 +45,10 @@ class DFA[AlphabetType](
 
   states.foreach((state: DFAState[AlphabetType]) => {
     assert(state.transitionMap.keySet == alphabet);
-    // TODO(@IvanMalison) Why does this cause union to fail?
-    // state.transitionMap.foreach({
-    //   case (_, mappedState: DFAState[AlphabetType]) =>
-    //     assert(states(mappedState))
-    // })
+    state.transitionMap.foreach({
+      case (_, mappedState: DFAState[AlphabetType]) =>
+        assert(states(mappedState))
+    })
   })
 
   def evaluate(word: Seq[AlphabetType]) = {
@@ -95,7 +94,6 @@ class DFACombiner[AlphabetType](
       getState(left.startState, right.startState),
       newStates,
       Some(left.alphabet ++ right.alphabet))
-
   }
 
   def getState(leftState: State, rightState: State): State = {
@@ -103,8 +101,7 @@ class DFACombiner[AlphabetType](
       case Some(mappedState) => mappedState
       case None => {
         val newState = buildState(leftState, rightState)
-        stateCache.put((leftState, rightState),
-          buildState(leftState, rightState))
+        stateCache.put((leftState, rightState), newState)
         newState
       }
     }
