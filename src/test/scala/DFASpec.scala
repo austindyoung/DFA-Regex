@@ -40,6 +40,22 @@ class DFASpec extends FunSpec {
     noConsecutiveStart,
     List(noConsecutiveStart, lastWasZero, lastWasOne, over))
 
+  lazy val done = TransitionMapDFAState[Int](
+    () => Map(0 -> over, 1 -> over),
+    true)
+  val one = new TransitionMapDFAState[Int](
+    () => Map(0 -> over, 1 -> done),
+    false)
+  val oh = new TransitionMapDFAState[Int](
+    () => Map(0 -> one, 1 -> over),
+    false)
+  val startState = new TransitionMapDFAState[Int](
+    () => Map(0 -> over, 1 -> oh),
+    false)
+  var oneOhOne = new DFA(
+    startState,
+    List(done, one, oh, startState, over))
+
   describe("Same number of zeros and ones DFA") {
 
     it("accepts strings with an even number of zeros.") {
@@ -83,26 +99,10 @@ class DFASpec extends FunSpec {
     }
 
     it("supports concatenation") {
-      
+      oneOhOne.concatenate(oneOhOne)
     }
 
     it("supports kleene*") {
-      lazy val done = TransitionMapDFAState[Int](
-        () => Map(0 -> over, 1 -> over),
-        true)
-      val one = new TransitionMapDFAState[Int](
-        () => Map(0 -> over, 1 -> done),
-        false)
-      val oh = new TransitionMapDFAState[Int](
-        () => Map(0 -> one, 1 -> over),
-        false)
-      val startState = new TransitionMapDFAState[Int](
-        () => Map(0 -> over, 1 -> oh),
-        false)
-      var oneOhOne = new DFA(
-        startState,
-        List(done, one, oh, startState, over))
-
       assert(oneOhOne.evaluate(List(1, 0, 1)))
       assert(!oneOhOne.evaluate(List(1, 0, 1, 1)))
 
