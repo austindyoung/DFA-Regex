@@ -1,7 +1,6 @@
 package com.austinyoung.dfaregex
 
 import org.scalatest.FunSpec
-import org.scalatest.BeforeAndAfter
 
 class DFASpec extends FunSpec {
 
@@ -46,42 +45,65 @@ class DFASpec extends FunSpec {
     it("accepts strings with an even number of zeros.") {
       assert(zerosEven.transition(0) == zerosOdd)
       assert(zerosEven.transition(0).transition(0) == zerosEven)
-      assert(evenZerosDFA.evaluate(List(0, 0)) == true)
-      assert(evenZerosDFA.evaluate(List(0, 1, 0, 1, 0)) == false)
-      assert(evenOnesDFA.evaluate(List(0, 1, 0, 1, 0)) == true)
-      assert(evenOnesDFA.evaluate(List(0, 1, 0, 1, 1)) == false)
-      assert(evenOnesDFA.evaluate(List(0, 1, 0, 1, 1, 1)) == true)
+      assert(evenZerosDFA.evaluate(List(0, 0)))
+      assert(!evenZerosDFA.evaluate(List(0, 1, 0, 1, 0)))
+      assert(evenOnesDFA.evaluate(List(0, 1, 0, 1, 0)))
+      assert(!evenOnesDFA.evaluate(List(0, 1, 0, 1, 1)))
+      assert(evenOnesDFA.evaluate(List(0, 1, 0, 1, 1, 1)))
     }
   }
   describe("DFA") {
 
     it("supports unions") {
       val bothEvenDFA = evenZerosDFA.union(evenOnesDFA)
-      assert(bothEvenDFA.evaluate(List(0, 1, 0, 1)) == true)
-      assert(bothEvenDFA.evaluate(List(0, 1, 0, 1, 1, 0)) == false)
-      assert(bothEvenDFA.evaluate(List(0, 1, 0, 1, 0)) == false)
-      assert(bothEvenDFA.evaluate(List(0, 1, 0, 1, 1)) == false)
+      assert(bothEvenDFA.evaluate(List(0, 1, 0, 1)))
+      assert(!bothEvenDFA.evaluate(List(0, 1, 0, 1, 1, 0)))
+      assert(!bothEvenDFA.evaluate(List(0, 1, 0, 1, 0)))
+      assert(!bothEvenDFA.evaluate(List(0, 1, 0, 1, 1)))
 
       val noConsecutiveAndAllEven = bothEvenDFA.union(noConsecutive)
-      assert(noConsecutiveAndAllEven.evaluate(List(0, 1, 0, 1)) == true)
-      assert(noConsecutiveAndAllEven.evaluate(List(0, 1, 0, 1, 1, 1)) == false)
+      assert(noConsecutiveAndAllEven.evaluate(List(0, 1, 0, 1)))
+      assert(!noConsecutiveAndAllEven.evaluate(List(0, 1, 0, 1, 1, 1)))
     }
 
     it("supports intersection") {
       val eitherEvenDFA = evenZerosDFA.intersect(evenOnesDFA)
-      assert(eitherEvenDFA.evaluate(List(0, 1, 0, 1)) == true)
-      assert(eitherEvenDFA.evaluate(List(0, 1, 0, 1, 1)) == true)
-      assert(eitherEvenDFA.evaluate(List(0, 1, 0, 1, 1, 0)) == false)
+      assert(eitherEvenDFA.evaluate(List(0, 1, 0, 1)))
+      assert(eitherEvenDFA.evaluate(List(0, 1, 0, 1, 1)))
+      assert(!eitherEvenDFA.evaluate(List(0, 1, 0, 1, 1, 0)))
 
       val noConsecutiveAndEitherEven = eitherEvenDFA.union(noConsecutive)
-      assert(noConsecutiveAndEitherEven.evaluate(List(1, 0)) == false)
-      assert(noConsecutiveAndEitherEven.evaluate(List(1, 0, 1)) == true)
-      assert(noConsecutiveAndEitherEven.evaluate(List(1, 0, 0, 1)) == false)
+      assert(!noConsecutiveAndEitherEven.evaluate(List(1, 0)))
+      assert(noConsecutiveAndEitherEven.evaluate(List(1, 0, 1)))
+      assert(!noConsecutiveAndEitherEven.evaluate(List(1, 0, 0, 1)))
 
       val anyCondition = eitherEvenDFA.intersect(noConsecutive)
-      assert(anyCondition.evaluate(List(1, 1, 0)) == true)
-      assert(anyCondition.evaluate(List(1, 0)) == true)
+      assert(anyCondition.evaluate(List(1, 1, 0)))
+      assert(anyCondition.evaluate(List(1, 0)))
+    }
+
+    it("supports kleene*") {
+      lazy val done = TransitionMapDFAState[Int](
+        () => Map(0 -> over, 1 -> over),
+        true)
+      val one = new TransitionMapDFAState[Int](
+        () => Map(0 -> over, 1 -> done),
+        false)
+      val oh = new TransitionMapDFAState[Int](
+        () => Map(0 -> one, 1 -> over),
+        false)
+      val startState = new TransitionMapDFAState[Int](
+        () => Map(0 -> over, 1 -> oh),
+        false)
+      var oneOhOne = new DFA(
+        startState,
+        List(done, one, oh, startState, over))
+
+      assert(oneOhOne.evaluate(List(1, 0, 1)))
+      assert(!oneOhOne.evaluate(List(1, 0, 1, 1)))
+
+      //assert(oneOhOne.kleene.evaluate(List(1, 0, 1, 1, 0, 1, 1, 0, 1)))
+
     }
   }
 }
-
