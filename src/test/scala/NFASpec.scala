@@ -36,10 +36,16 @@ class NFASpec extends FunSpec {
     List(startState, secondState, thirdState, accept),
     Epsilon::List(NonEmpty(0), NonEmpty(1)))
 
+  val zero: NFAState[Int] = new TransitionMapNFAState[Int](Map(NonEmpty(0) -> List(zero), NonEmpty(1) -> List(one)), true)
+  val one: NFAState[Int] = new TransitionMapNFAState[Int](Map(NonEmpty(0) -> List(zero), NonEmpty(1) -> List(one)), false)
+  val endsInZero = new NFA[Int](
+    one,
+    List(zero, one),
+    Epsilon::List(NonEmpty(0), NonEmpty(1)))
+
   describe("NFAToDFA") {
     it("works on an NFA that is basically just a DFA") {
       val evenZerosDFA = evenZerosNFA.toDFA
-      //evenZerosDFA.states.foreach(_ => println(_.transitionMap))
       assert(evenZerosDFA.evaluate(List(0, 0)))
       assert(!evenZerosDFA.evaluate(List(0, 1, 0, 1, 0)))
       assert(evenZerosDFA.evaluate(List(0, 1, 0, 1, 0, 0)))
@@ -54,6 +60,29 @@ class NFASpec extends FunSpec {
       assert(!oneTwoOrThreeFromLastDFA.evaluate(List(0, 0, 1, 0, 0, 0)))
       assert(oneTwoOrThreeFromLastDFA.evaluate(List(0, 0, 1, 0, 1, 0)))
       assert(oneTwoOrThreeFromLastDFA.evaluate(List(0, 0, 1, 1, 1, 0)))
+    }
+  }
+
+  describe("Concatenator") {
+    it("Works on two different NFAs") {
+      val theDFA = new Concatenator(endsInZero, oneTwoOrThreeFromLastNFA).concatenate.toDFA
+      assert(endsInZero.toDFA.evaluate(List(1, 0, 1, 0, 0)))
+      assert(!theDFA.evaluate(List(1, 0)))
+      assert(!theDFA.evaluate(List(1, 0, 0)))
+      assert(!theDFA.evaluate(List(1, 0, 0, 0)))
+      assert(theDFA.evaluate(List(0, 1, 0)))
+      assert(theDFA.evaluate(List(1, 0, 1, 0, 0, 1, 0)))
+    }
+
+    it("Works on same NFA") {
+      val theDFA = new Concatenator(
+        oneTwoOrThreeFromLastNFA, 
+        oneTwoOrThreeFromLastNFA,
+        oneTwoOrThreeFromLastNFA,
+        oneTwoOrThreeFromLastNFA).concatenate.toDFA
+      assert(theDFA.evaluate(List(1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1)))
+      assert(!theDFA.evaluate(List(1, 0, 1, 0, 0)))
+      assert(theDFA.evaluate(List(0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0)))
     }
   }
 }

@@ -13,7 +13,7 @@ abstract class NFAState[T] {
 }
 
 class TransitionMapNFAState[T](
-    _transitionMap: => Map[Alphabet[T], Seq[NFAState[T]]],
+    _transitionMap: => Map[Alphabet[T], Iterable[NFAState[T]]],
     val isAcceptState: Boolean) extends NFAState[T] {
   lazy val transitionMap = _transitionMap
 }
@@ -21,20 +21,18 @@ class TransitionMapNFAState[T](
 class NFA[T](
     val startState: NFAState[T],
     _states: Iterable[NFAState[T]],
-    _alphabet: Iterable[Alphabet[T]]) {
+    val alphabet: Iterable[Alphabet[T]]) {
 
-  val alphabet = immutable.HashSet[T]() ++ _alphabet
   val states = immutable.HashSet[NFAState[T]]() ++ _states
 
   def toDFA = {
     new NFAToDFA(this).DFA
   }
 
-  def concatenate(that: NFA[T]) = {
-
+  def concatenate(nfas: NFA[T]*) = {
+    new Concatenator(nfas:_*).concatenate
   }
 }
-
 
 trait CachedStateBuilder[Source[_], Dest[_], Alphabet] {
   type SourceState = Source[Alphabet]
@@ -57,19 +55,63 @@ trait CachedStateBuilder[Source[_], Dest[_], Alphabet] {
   def buildState(states: Iterable[SourceState]): DestState
 }
 
-class ConcatenationBuilder[T](left: NFA[T], right: NFA[T])
-    extends CachedStateBuilder[NFAState, NFAState, T] {
+class Concatenator[T](nfas: NFA[T]*) {
 
-  private lazy val (leftAcceptStates, leftOtherStates) = left.states.partition((state) =>
-      state.isAcceptState)
+  type State = NFAState[T]
 
-  def concatenate() = {
+  // The Int in the key of this map corresponds to the nfas index in
+  // nfa array. This is needed to handle the case where some of the
+  // concatenated NFA instances have identical (i.e. same reference)
+  // NFAStates. This ensures that the new states produced for those
+  // Identical NFAStates are different.
+  val oldStateToNewState: mutable.Map[(State, Int), State] = mutable.HashMap[(State, Int), State]()
 
+  def concatenate = {
+    // Populate the oldStateToNewState all of the last element of the
+    // concatenation
+    // These will be the only accept states.
+    val nfasWithIndex = nfas.zipWithIndex
+    val (last, index) = nfasWithIndex.last
+    for( state <- last.states) oldStateToNewState.put((state, index), state)
+    nfasWithIndex.reduceRight((left, right) => { linkStates(left, right) })
+    val (firstNFA, firstIndex) = nfasWithIndex.head
+    new NFA[T](
+      oldStateToNewState((firstNFA.startState, firstIndex)),
+      oldStateToNewState.values,
+      nfas.head.alphabet
+    )
   }
 
+  def linkStates(left: (NFA[T], Int), right: (NFA[T], Int)) = {
+    val (leftNFA, leftIndex) = left
+    val (rightNFA, rightIndex) = left
+    for( state <- leftNFA.states ) {
+      oldStateToNewState.put(
+        (state, leftIndex),
+        buildState(
+          state,
+          leftIndex,
+          if(state.isAcceptState) Some(rightNFA.startState) else None))
+        }
+    left
+  }
   
-  def buildState(states: Iterable[SourceState]): DestState = {
-
+  def buildState(state: State, nfaIndex: Int, linkState: Option[State]): State = {
+    new TransitionMapNFAState[T](
+      state.transitionMap.map({case (element, states) => {
+        var newStates = states.map((elementState) => 
+          oldStateToNewState((elementState, nfaIndex)))
+        newStates = element match {
+          case a: NonEmpty[T] =>  newStates
+          case Epsilon => linkState match {
+            case Some(startState) =>
+              newStates ++ List(oldStateToNewState((startState, nfaIndex + 1)))
+            case None => newStates
+          }
+        }
+        (element, newStates)
+      }}),
+      false)
   }
 }
 
@@ -87,6 +129,7 @@ class NFAToDFA[T](nfa: NFA[T]) extends CachedStateBuilder[NFAState, DFAState, T]
         if (!states(state)) queue.enqueue(state)
       })
     }
+    println(states)
     new DFA[T](
       startState,
       states.toSet,
