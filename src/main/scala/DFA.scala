@@ -58,6 +58,10 @@ class DFA[AlphabetType](
     }).isAcceptState
   }
 
+  private def combine(op: (Boolean, Boolean) => Boolean)(that: DFA[AlphabetType]) = {
+    new DFACombiner(this, that, op).combine
+  }
+
   def union = combine((left: Boolean, right: Boolean) => left || right)_
 
   def intersect = combine((left: Boolean, right: Boolean) => left && right)_
@@ -65,10 +69,6 @@ class DFA[AlphabetType](
   def takeAway = combine((left: Boolean, right: Boolean) => left && !right)_
   
   def exteriorProd = combine((left: Boolean, right: Boolean) => left != right)_
-
-  def combine(op: (Boolean, Boolean) => Boolean)(that: DFA[AlphabetType]) = {
-    new DFACombiner(this, that, op).combine
-  }
 }
 
 
