@@ -31,18 +31,49 @@ class NFA[T](
   }
 
   def concatenate(that: NFA[T]) = {
-    val (acceptStates, otherStates) = states.partition((state) =>
-      state.isAcceptState)
 
   }
 }
 
-class NFAToDFA[T](nfa: NFA[T]) {
-  type SourceState = NFAState[T]
-  type DestState = DFAState[T]
 
-  private val stateCache: mutable.Map[Iterable[SourceState], DestState] =
+trait CachedStateBuilder[Source[_], Dest[_], Alphabet] {
+  type SourceState = Source[Alphabet]
+  type DestState = Dest[Alphabet]
+
+  val stateCache: mutable.Map[Iterable[SourceState], DestState] =
     mutable.HashMap[Iterable[SourceState], DestState]()
+
+  def getState(states: Iterable[SourceState]) = {
+    stateCache get states match {
+      case Some(mappedState) => mappedState
+      case None => {
+        val newState = buildState(states)
+        stateCache.put(states, newState)
+        newState
+      }
+    }
+  }
+
+  def buildState(states: Iterable[SourceState]): DestState
+}
+
+class ConcatenationBuilder[T](left: NFA[T], right: NFA[T])
+    extends CachedStateBuilder[NFAState, NFAState, T] {
+
+  private lazy val (leftAcceptStates, leftOtherStates) = left.states.partition((state) =>
+      state.isAcceptState)
+
+  def concatenate() = {
+
+  }
+
+  
+  def buildState(states: Iterable[SourceState]): DestState = {
+
+  }
+}
+
+class NFAToDFA[T](nfa: NFA[T]) extends CachedStateBuilder[NFAState, DFAState, T] {
 
   def DFA = {
     val states = mutable.HashSet[DestState]()
@@ -60,17 +91,6 @@ class NFAToDFA[T](nfa: NFA[T]) {
       startState,
       states.toSet,
       Some(nfa.alphabet.collect({case NonEmpty(elem: T) => elem}).toIterable))
-  }
-
-  def getState(states: Iterable[SourceState]) = {
-    stateCache get states match {
-      case Some(mappedState) => mappedState
-      case None => {
-        val newState = buildState(states)
-        stateCache.put(states, newState)
-        newState
-      }
-    }
   }
 
   def buildState(states: Iterable[SourceState]): DestState = {
