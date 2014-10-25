@@ -3,7 +3,14 @@ package com.austinyoung.dfaregex
 import scala.collection._
 import scala.collection.immutable
 
-class Epsilon;
+abstract class Alphabet[T];
+
+case class NonEmpty[T](value: T) extends Alphabet[T]
+
+case object Epsilon extends Alphabet
+
+// class Epsilon {
+// }
 
 abstract class NFAState[T] {
   def isAcceptState: Boolean
@@ -16,17 +23,36 @@ case class TransitionMapNFAState[T](
   lazy val transitionMap = transitionMapFunction()
 }
 
-class NFA[AlphabetType](
-    val startState: NFAState[AlphabetType],
-    _states: Iterable[NFAState[AlphabetType]],
-    _alphabet: Iterable[AlphabetType]) {
+class NFA[T](
+    val startState: NFAState[T],
+    _states: Iterable[NFAState[T]],
+    _alphabet: Iterable[T]) {
 
-  val alphabet = immutable.HashSet[AlphabetType]() ++ _alphabet
-  val states = immutable.HashSet[NFAState[AlphabetType]]() ++ _states
+  val alphabet = immutable.HashSet[T]() ++ _alphabet
+  val states = immutable.HashSet[NFAState[T]]() ++ _states
 
-  def toDFA:DFA[AlphabetType] = {
-    
+}
 
+class NFAToDFA[T](nfa: NFA[T]) {
+  type Alphabet = Either[T, Epsilon]
+  def toDFA = {
+    //getState(getElementClosure(nfa.startState)
+
+  }
+
+  def getClosure(state: NFAState[T], element: Alphabet) {
+
+  }
+
+  def getClosureOneLevel(state: NFAState[T], element: Alphabet) {
+    val maybeThisState = element match { 
+      case Right(_) => List()
+      case Left(_) => List(state)
+    }
+    (state.transitionMap get element) match {
+      case Some(elements) => elements ++ maybeThisState
+      case None => maybeThisState
+    }
   }
 }
 
