@@ -30,10 +30,9 @@ class NFA[T](
   val states = immutable.HashSet[NFAState[T]]() ++ _states
 
   def evaluate = this.DFA.evaluate _
-
   def * = new Kleene(this).kleene
-
   def +(nfas: NFA[T]*) = new Concatenator(this +: nfas:_*).concatenate
+  def *+ = new Kleene(this, true).kleene
 }
 
 trait CachedStateBuilder[Source[_], Dest[_], Alphabet] {
@@ -57,15 +56,26 @@ trait CachedStateBuilder[Source[_], Dest[_], Alphabet] {
   def buildState(states: Iterable[SourceState]): DestState
 }
 
-class Kleene[T](nfa: NFA[T]) extends CachedStateBuilder[NFAState, NFAState, T] {
+class Kleene[T](nfa: NFA[T], atLeastOne: Boolean = false)
+    extends CachedStateBuilder[NFAState, NFAState, T] {
 
   type State = NFAState[T]
 
-  def kleene = new NFA(
-    getState(List(nfa.startState)), 
-    nfa.states.map((state) =>
-      getState(List(state))),
-    nfa.alphabet)
+  def kleene = {
+    val startState = newStartState
+    val states = nfa.states.map((state) => getState(List(state))).toSet
+    new NFA(
+      startState,
+      states + startState,
+      nfa.alphabet)
+  }
+
+  def newStartState = {
+    val actual = getState(List(nfa.startState))
+    if(atLeastOne) actual else new TransitionMapNFAState[T](
+      Map(Epsilon -> List(actual)),
+      true)
+  }
 
   def buildState(states: Iterable[State]) = buildState(states.head)
 

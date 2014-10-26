@@ -99,7 +99,7 @@ class DFASpec extends FunSpec {
     }
 
     it("converts to an NFA") {
-      val eitherEvenNFA = evenZerosDFA.union(evenOnesDFA).NFA.DFA.NFA.DFA
+      val eitherEvenNFA = evenZerosDFA.union(evenOnesDFA).NFA
       assert(eitherEvenNFA.evaluate(List(0, 1, 0, 1)))
       assert(eitherEvenNFA.evaluate(List(0, 1, 0, 1, 1)))
       assert(!eitherEvenNFA.evaluate(List(0, 1)))

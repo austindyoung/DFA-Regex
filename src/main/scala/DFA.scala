@@ -94,7 +94,7 @@ class DFAToNFA[T](dfa: DFA[T]) extends CachedStateBuilder[DFAState, NFAState, T]
     val state: SourceState = states.head
     new TransitionMapNFAState[T](
       state.transitionMap.map({case (key, mapState: SourceState) =>
-        (NonEmpty(key), List(getState(List(state))))}),
+        (NonEmpty(key), List(getState(List(mapState))))}),
       state.isAcceptState)
   }
 }
