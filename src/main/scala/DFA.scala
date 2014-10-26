@@ -44,7 +44,9 @@ class DFA[AlphabetType](
   val states = immutable.HashSet[DFAState[AlphabetType]]() ++ _states
 
   states.foreach((state: DFAState[AlphabetType]) => {
+    // Make sure that the keyset of each state is the DFAs alphabet.
     assert(state.transitionMap.keySet == alphabet);
+    // Make sure that all of the mapped states are in the DFAs state map.
     state.transitionMap.foreach({
       case (_, mappedState: DFAState[AlphabetType]) =>
         assert(states(mappedState))
@@ -63,14 +65,10 @@ class DFA[AlphabetType](
   }
 
   def union = combine((left: Boolean, right: Boolean) => left || right)_
-
   def intersect = combine((left: Boolean, right: Boolean) => left && right)_
-  
   def takeAway = combine((left: Boolean, right: Boolean) => left && !right)_
-  
   def exteriorProd = combine((left: Boolean, right: Boolean) => left != right)_
 }
-
 
 class DFACombiner[AlphabetType](
     left: DFA[AlphabetType],
