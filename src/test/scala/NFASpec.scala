@@ -168,8 +168,12 @@ class NFASpec extends FunSpec {
       assert(!endsWithB.evaluate("a"))
       assert(!endsWithB.evaluate(""))
       assert(endsWithB.evaluate("aaaaaaaab"))
+      // This is the important line of this test -- We are making sure
+      // that we didn't just say "make all the start states accept states."
       assert(!endsWithB.*.evaluate("a"))
       assert(endsWithB.*.evaluate(""))
+      assert(!endsWithB.*+.evaluate(""))
+      assert(endsWithB.*+.evaluate("b"))
     }
   }
 }
