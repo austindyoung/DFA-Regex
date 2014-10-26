@@ -64,7 +64,7 @@ class NFASpec extends FunSpec {
   }
 
   describe("Concatenator") {
-    it("Works on two different NFAs") {
+    it("works on two different NFAs") {
       val theDFA = new Concatenator(endsInZero, oneTwoOrThreeFromLastNFA).concatenate.DFA
       assert(endsInZero.DFA.evaluate(List(1, 0, 1, 0, 0)))
       assert(!theDFA.evaluate(List(1, 0)))
@@ -74,7 +74,7 @@ class NFASpec extends FunSpec {
       assert(theDFA.evaluate(List(1, 0, 1, 0, 0, 1, 0)))
     }
 
-    it("Works on same NFA") {
+    it("works on same NFA.") {
       val concatenated = new Concatenator(
         oneTwoOrThreeFromLastNFA, 
         oneTwoOrThreeFromLastNFA).concatenate
@@ -91,6 +91,28 @@ class NFASpec extends FunSpec {
       assert(theDFA.evaluate(List(1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0)))
       assert(!theDFA.evaluate(List(1, 0, 1, 0, 0)))
       assert(theDFA.evaluate(List(0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0)))
+    }
+  }
+
+  describe("Kleene Closure") {
+    it("recognizes an arbitrary number of repititions.") {
+      lazy val a: TransitionMapNFAState[Char] = new TransitionMapNFAState[Char](
+        Map(NonEmpty('b') -> List(b)),
+        false)
+      lazy val b: TransitionMapNFAState[Char] = new TransitionMapNFAState[Char](
+        Map(),
+        true)
+      val ab = new NFA[Char](a, List(a, b), List(NonEmpty('a'), NonEmpty('b'), Epsilon))
+      assert(ab.evaluate("ab"))
+      assert(!ab.evaluate("abbb"))
+    }
+    it("doesn't blow up when states point to themselves") {
+      lazy val accept: TransitionMapNFAState[Char] = new TransitionMapNFAState[Char](
+        Map(NonEmpty('a') -> List(accept)),
+        true)
+      val acceptNFA = new NFA(accept, List(accept), List(NonEmpty('a'), Epsilon)) *
+
+      assert(acceptNFA.evaluate("aaaaaa"))
     }
   }
 }

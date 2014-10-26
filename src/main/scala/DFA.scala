@@ -56,7 +56,9 @@ class DFA[AlphabetType](
   def evaluate(word: Seq[AlphabetType]) = {
     word.foldLeft(startState)(
       (currentState: DFAState[AlphabetType], elem: AlphabetType) => {
-      currentState.transition(elem)
+        val nextState = currentState.transition(elem)
+        println(nextState.transitionMap)
+        nextState
     }).isAcceptState
   }
 
@@ -68,6 +70,34 @@ class DFA[AlphabetType](
   def intersect = combine((left: Boolean, right: Boolean) => left && right)_
   def takeAway = combine((left: Boolean, right: Boolean) => left && !right)_
   def exteriorProd = combine((left: Boolean, right: Boolean) => left != right)_
+
+  lazy val NFA = new DFAToNFA(this).NFA
+
+  def +(dfas: DFA[AlphabetType]*) =
+    NFA.+(dfas.map((dfa) => dfa.NFA):_*).DFA
+
+  def * = this.NFA.*.DFA
+}
+
+class DFAToNFA[T](dfa: DFA[T]) extends CachedStateBuilder[DFAState, NFAState, T] {
+
+  def NFA = {
+    val startState = getState(List(dfa.startState))
+    val alphabet: Iterable[Alphabet[T]] =
+      dfa.alphabet.map((elem) => NonEmpty(elem)) ++ List(Epsilon)
+    new NFA[T](
+      startState,
+      dfa.states.map((state) => getState(List(state))),
+      alphabet)
+  }
+
+  def buildState(states: Iterable[SourceState]) = {
+    val state: SourceState = states.head
+    new TransitionMapNFAState[T](
+      state.transitionMap.map({case (key, mapState: SourceState) =>
+        (NonEmpty(key), List(getState(List(state))))}),
+      state.isAcceptState)
+  }
 }
 
 class DFACombiner[AlphabetType](

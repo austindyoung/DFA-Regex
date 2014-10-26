@@ -98,15 +98,25 @@ class DFASpec extends FunSpec {
       assert(anyCondition.evaluate(List(1, 0)))
     }
 
+    it("converts to an NFA") {
+      val eitherEvenNFA = evenZerosDFA.union(evenOnesDFA).NFA
+      assert(eitherEvenNFA.evaluate(List(0, 1, 0, 1)))
+      assert(eitherEvenNFA.evaluate(List(0, 1, 0, 1, 1)))
+      assert(!eitherEvenNFA.evaluate(List(0, 1)))
+      assert(!eitherEvenNFA.evaluate(List(0, 1, 0, 1, 1, 0)))
+    }
+
     it("supports concatenation") {
-      //oneOhOne.concatenate(oneOhOne)
+      assert((oneOhOne + oneOhOne).evaluate(List(1, 0, 1, 1, 0, 1)))
     }
 
     it("supports kleene*") {
       assert(oneOhOne.evaluate(List(1, 0, 1)))
       assert(!oneOhOne.evaluate(List(1, 0, 1, 1)))
+      val starred = oneOhOne *
 
-      //assert(oneOhOne.kleene.evaluate(List(1, 0, 1, 1, 0, 1, 1, 0, 1)))
+      assert(starred.evaluate(List(1, 0, 1)))
+      assert(starred.evaluate(List(1, 0, 1, 1, 0, 1, 1, 0, 1)))
     }
   }
 }
