@@ -174,6 +174,30 @@ class NFASpec extends FunSpec {
       assert(endsWithB.*.evaluate(""))
       assert(!endsWithB.*+.evaluate(""))
       assert(endsWithB.*+.evaluate("b"))
+
+    }
+
+    def justChar(character: Char) = {
+      lazy val start = new TransitionMapNFAState[Char](
+        Map(NonEmpty(character) -> List(accept)),
+        false)
+      lazy val accept = new TransitionMapNFAState[Char](Map(), true)
+      new NFA(start, List(start, accept), List(Epsilon, NonEmpty(character)))
+    }
+
+    it("handles nested kleene * operations") {
+      val C = justChar('c')
+      val D = justChar('d')
+      assert(C.evaluate("c"))
+      assert(!C.evaluate("cc"))
+      assert(!C.evaluate(""))
+      val cabd: NFA[Char] = (C + (ab *) + D).*
+      assert(cabd.evaluate("cabd"))
+      assert(cabd.evaluate("cababd"))
+      assert(cabd.evaluate("cababdcababd"))
+      assert(!cabd.evaluate("cababdcababdd"))
+      assert(!cabd.evaluate("cababdcababdcababad"))
+      assert(cabd.evaluate("cababdcababdcabababd"))
     }
   }
 }
