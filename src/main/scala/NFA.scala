@@ -23,15 +23,15 @@ class NFA[T](
     _states: Iterable[NFAState[T]],
     val alphabet: Iterable[Alphabet[T]]) {
 
-  val states = immutable.HashSet[NFAState[T]]() ++ _states
+  lazy val DFA = new NFAToDFA(this).DFA
 
-  def toDFA = {
-    new NFAToDFA(this).DFA
-  }
+  val states = immutable.HashSet[NFAState[T]]() ++ _states
 
   def concatenate(nfas: NFA[T]*) = {
     new Concatenator(nfas:_*).concatenate
   }
+
+  def evaluate = this.DFA.evaluate _
 }
 
 trait CachedStateBuilder[Source[_], Dest[_], Alphabet] {
@@ -64,7 +64,7 @@ class Concatenator[T](nfas: NFA[T]*) {
   // concatenated NFA instances have identical (i.e. same reference)
   // NFAStates. This ensures that the new states produced for those
   // Identical NFAStates are different.
-  val oldStateToNewState: mutable.Map[(State, Int), State] = mutable.HashMap[(State, Int), State]()
+  private val oldStateToNewState: mutable.Map[(State, Int), State] = mutable.HashMap[(State, Int), State]()
 
   def concatenate = {
     // Populate the oldStateToNewState all of the last element of the
@@ -84,7 +84,7 @@ class Concatenator[T](nfas: NFA[T]*) {
 
   def linkStates(left: (NFA[T], Int), right: (NFA[T], Int)) = {
     val (leftNFA, leftIndex) = left
-    val (rightNFA, rightIndex) = left
+    val (rightNFA, rightIndex) = right
     for( state <- leftNFA.states ) {
       oldStateToNewState.put(
         (state, leftIndex),
@@ -97,15 +97,22 @@ class Concatenator[T](nfas: NFA[T]*) {
   }
   
   def buildState(state: State, nfaIndex: Int, linkState: Option[State]): State = {
+    val transitionMap = state.transitionMap get Epsilon match {
+      case Some(_) => state.transitionMap
+      // We need to make sure that Epsilon is in the transition map so
+      // we are able to insert the epsilon transition to linkState
+      case None => state.transitionMap + (Epsilon -> List())
+    }
     new TransitionMapNFAState[T](
-      state.transitionMap.map({case (element, states) => {
+      transitionMap.map({case (element, states) => {
         var newStates = states.map((elementState) => 
           oldStateToNewState((elementState, nfaIndex)))
         newStates = element match {
           case a: NonEmpty[T] =>  newStates
           case Epsilon => linkState match {
-            case Some(startState) =>
+            case Some(startState) => {
               newStates ++ List(oldStateToNewState((startState, nfaIndex + 1)))
+            }
             case None => newStates
           }
         }
@@ -129,7 +136,6 @@ class NFAToDFA[T](nfa: NFA[T]) extends CachedStateBuilder[NFAState, DFAState, T]
         if (!states(state)) queue.enqueue(state)
       })
     }
-    println(states)
     new DFA[T](
       startState,
       states.toSet,
