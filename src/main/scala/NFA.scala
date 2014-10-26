@@ -14,24 +14,26 @@ abstract class NFAState[T] {
 
 class TransitionMapNFAState[T](
     _transitionMap: => Map[Alphabet[T], Iterable[NFAState[T]]],
-    val isAcceptState: Boolean) extends NFAState[T] {
+    val isAcceptState: Boolean,
+    _name: Option[String] = None) extends NFAState[T] {
   lazy val transitionMap = _transitionMap
 }
 
 class NFA[T](
     val startState: NFAState[T],
     _states: Iterable[NFAState[T]],
-    val alphabet: Iterable[Alphabet[T]]) {
+    val alphabet: Iterable[Alphabet[T]],
+    _name: Option[String] = None) {
 
   lazy val DFA = new NFAToDFA(this).DFA
 
   val states = immutable.HashSet[NFAState[T]]() ++ _states
 
-  def concatenate(nfas: NFA[T]*) = {
-    new Concatenator(nfas:_*).concatenate
-  }
-
   def evaluate = this.DFA.evaluate _
+
+  def * = new Kleene(this).kleene
+
+  def +(nfas: NFA[T]*) = new Concatenator(this +: nfas:_*).concatenate
 }
 
 trait CachedStateBuilder[Source[_], Dest[_], Alphabet] {
@@ -55,6 +57,43 @@ trait CachedStateBuilder[Source[_], Dest[_], Alphabet] {
   def buildState(states: Iterable[SourceState]): DestState
 }
 
+class Kleene[T](nfa: NFA[T]) extends CachedStateBuilder[NFAState, NFAState, T] {
+
+  type State = NFAState[T]
+
+  def kleene = new NFA(
+    getState(List(nfa.startState)), 
+    nfa.states.map((state) =>
+      getState(List(state))),
+    nfa.alphabet)
+
+  def buildState(states: Iterable[State]) = buildState(states.head)
+
+  def buildState(state: State): State = {
+    val transitionMap = state.transitionMap get Epsilon match {
+      case Some(_) => state.transitionMap
+      // We need to make sure that Epsilon is in the transition map so
+      // we are able to insert the epsilon transition to linkState
+      case None => state.transitionMap + (Epsilon -> List())
+    }
+    val newState: State = new TransitionMapNFAState[T](
+      transitionMap.map({case (element, states) => {
+        var newStates = states.map((elementState) => stateCache(List(elementState)))
+        newStates = element match {
+          case a: NonEmpty[T] =>  newStates
+          case Epsilon => if (state.isAcceptState) {
+            newStates ++ List(stateCache(List(nfa.startState)))
+          } else {
+            newStates
+          }
+        }
+        (element, newStates)
+      }}),
+      state.isAcceptState)
+    newState
+  }
+}
+
 class Concatenator[T](nfas: NFA[T]*) {
 
   type State = NFAState[T]
@@ -64,15 +103,15 @@ class Concatenator[T](nfas: NFA[T]*) {
   // concatenated NFA instances have identical (i.e. same reference)
   // NFAStates. This ensures that the new states produced for those
   // Identical NFAStates are different.
-  private val oldStateToNewState: mutable.Map[(State, Int), State] = mutable.HashMap[(State, Int), State]()
+  private val oldStateToNewState: mutable.Map[(State, Int), State] =
+    mutable.HashMap[(State, Int), State]()
 
   def concatenate = {
-    // Populate the oldStateToNewState all of the last element of the
-    // concatenation
-    // These will be the only accept states.
+    // Populate the oldStateToNewState with the states of the last nfa
+    // involved in the concatenation
     val nfasWithIndex = nfas.zipWithIndex
     val (last, index) = nfasWithIndex.last
-    for( state <- last.states) oldStateToNewState.put((state, index), state)
+    for( state <- last.states ) oldStateToNewState.put((state, index), state)
     nfasWithIndex.reduceRight((left, right) => { linkStates(left, right) })
     val (firstNFA, firstIndex) = nfasWithIndex.head
     new NFA[T](
