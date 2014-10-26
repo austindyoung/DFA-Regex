@@ -43,6 +43,17 @@ class NFASpec extends FunSpec {
     List(zero, one),
     Epsilon::List(NonEmpty(0), NonEmpty(1)))
 
+  lazy val start: TransitionMapNFAState[Char] = new TransitionMapNFAState[Char](
+    Map(NonEmpty('a') -> List(a)),
+    false)
+  lazy val a: TransitionMapNFAState[Char] = new TransitionMapNFAState[Char](
+    Map(NonEmpty('b') -> List(b)),
+    false)
+  lazy val b: TransitionMapNFAState[Char] = new TransitionMapNFAState[Char](
+    Map(),
+    true)
+  val ab = new NFA[Char](start, List(start, a, b), List(NonEmpty('a'), NonEmpty('b'), Epsilon))
+
   describe("NFAToDFA") {
     it("works on an NFA that is basically just a DFA") {
       val evenZerosDFA = evenZerosNFA.DFA
@@ -96,15 +107,15 @@ class NFASpec extends FunSpec {
 
   describe("Kleene Closure") {
     it("recognizes an arbitrary number of repititions.") {
-      lazy val a: TransitionMapNFAState[Char] = new TransitionMapNFAState[Char](
-        Map(NonEmpty('b') -> List(b)),
-        false)
-      lazy val b: TransitionMapNFAState[Char] = new TransitionMapNFAState[Char](
-        Map(),
-        true)
-      val ab = new NFA[Char](a, List(a, b), List(NonEmpty('a'), NonEmpty('b'), Epsilon))
       assert(ab.evaluate("ab"))
       assert(!ab.evaluate("abbb"))
+      val abStar = ab *
+
+      assert(abStar.evaluate("abab"))
+      assert(!abStar.evaluate("abb"))
+      assert(!abStar.evaluate("abbb"))
+      assert(abStar.evaluate("abababababababababababababab"))
+      assert(abStar.evaluate(""))
     }
     it("doesn't blow up when states point to themselves") {
       lazy val accept: TransitionMapNFAState[Char] = new TransitionMapNFAState[Char](
@@ -113,6 +124,37 @@ class NFASpec extends FunSpec {
       val acceptNFA = new NFA(accept, List(accept), List(NonEmpty('a'), Epsilon)) *
 
       assert(acceptNFA.evaluate("aaaaaa"))
+    }
+  }
+
+  describe("NFA") {
+    it("Can apply concatenation and kleene closure together") {
+      val accept = new TransitionMapNFAState[Char](Map(), true)
+      lazy val startState: NFAState[Char] = new TransitionMapNFAState[Char](
+        Map(
+          NonEmpty('a') -> List(startState),
+          NonEmpty('b') -> List(startState, secondState)),
+        false)
+      lazy val secondState: NFAState[Char] = new TransitionMapNFAState[Char](
+        Map(
+          NonEmpty('a') -> List(thirdState),
+          NonEmpty('b') -> List(thirdState),
+          Epsilon -> List(thirdState)),
+        false)
+      lazy val thirdState: NFAState[Char] = new TransitionMapNFAState[Char](
+        Map(
+          NonEmpty('a') -> List(accept),
+          NonEmpty('b') -> List(accept)),
+        false)
+      val bOneOrTwoFromLastState = new NFA[Char](
+        startState,
+        List(startState, secondState, thirdState, accept),
+        Epsilon::List(NonEmpty('a'), NonEmpty('b')))
+      val NFA = ab.*.+(bOneOrTwoFromLastState)
+      assert(NFA.evaluate("abba"))
+      assert(!NFA.evaluate("ab"))
+      assert(NFA.evaluate("ababa"))
+      assert(NFA.evaluate("ba"))
     }
   }
 }
