@@ -143,12 +143,10 @@ class NFAToDFA[T](nfa: NFA[T]) extends CachedStateBuilder[NFAState, DFAState, T]
   }
 
   def buildState(states: Iterable[SourceState]): DestState = {
-    TransitionMapDFAState[T](
-      () => {
+    new TransitionMapDFAState[T](
         nfa.alphabet.collect({case element: NonEmpty[T] => {
           (element.value, getState(getClosure(states, element)))
-        }}).toMap
-      },
+        }}).toMap,
       states.exists((state) => state.isAcceptState))
   }
 
