@@ -45,13 +45,13 @@ class NFASpec extends FunSpec {
 
   describe("NFAToDFA") {
     it("works on an NFA that is basically just a DFA") {
-      val evenZerosDFA = evenZerosNFA.toDFA
+      val evenZerosDFA = evenZerosNFA.DFA
       assert(evenZerosDFA.evaluate(List(0, 0)))
       assert(!evenZerosDFA.evaluate(List(0, 1, 0, 1, 0)))
       assert(evenZerosDFA.evaluate(List(0, 1, 0, 1, 0, 0)))
     }
     it("works with non determinism and epsilon transitions") {
-      val oneTwoOrThreeFromLastDFA = oneTwoOrThreeFromLastNFA.toDFA
+      val oneTwoOrThreeFromLastDFA = oneTwoOrThreeFromLastNFA.DFA
       assert(!oneTwoOrThreeFromLastDFA.evaluate(List(0, 0)))
       assert(oneTwoOrThreeFromLastDFA.evaluate(List(1, 0)))
       assert(oneTwoOrThreeFromLastDFA.evaluate(List(1, 0, 0)))
@@ -65,8 +65,8 @@ class NFASpec extends FunSpec {
 
   describe("Concatenator") {
     it("Works on two different NFAs") {
-      val theDFA = new Concatenator(endsInZero, oneTwoOrThreeFromLastNFA).concatenate.toDFA
-      assert(endsInZero.toDFA.evaluate(List(1, 0, 1, 0, 0)))
+      val theDFA = new Concatenator(endsInZero, oneTwoOrThreeFromLastNFA).concatenate.DFA
+      assert(endsInZero.DFA.evaluate(List(1, 0, 1, 0, 0)))
       assert(!theDFA.evaluate(List(1, 0)))
       assert(!theDFA.evaluate(List(1, 0, 0)))
       assert(!theDFA.evaluate(List(1, 0, 0, 0)))
@@ -75,12 +75,20 @@ class NFASpec extends FunSpec {
     }
 
     it("Works on same NFA") {
+      val concatenated = new Concatenator(
+        oneTwoOrThreeFromLastNFA, 
+        oneTwoOrThreeFromLastNFA).concatenate
+
+      assert(concatenated.evaluate(List(1, 1, 1, 1)))
       val theDFA = new Concatenator(
         oneTwoOrThreeFromLastNFA, 
         oneTwoOrThreeFromLastNFA,
         oneTwoOrThreeFromLastNFA,
-        oneTwoOrThreeFromLastNFA).concatenate.toDFA
-      assert(theDFA.evaluate(List(1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1)))
+        oneTwoOrThreeFromLastNFA).concatenate.DFA
+      assert(theDFA.evaluate(List(1, 1, 1, 1, 1, 1, 1, 1)))
+      assert(theDFA.evaluate(List(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1)))
+      assert(theDFA.evaluate(List(0, 1, 0, 1, 0, 1, 0, 1, 0)))
+      assert(theDFA.evaluate(List(1, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0)))
       assert(!theDFA.evaluate(List(1, 0, 1, 0, 0)))
       assert(theDFA.evaluate(List(0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 0)))
     }
