@@ -4,53 +4,53 @@ import org.scalatest.FunSpec
 
 class DFASpec extends FunSpec {
 
-  lazy val zerosEven: DFAState[Int] = new TransitionMapDFAState[Int](
-    () => Map(0 -> zerosOdd, 1 -> zerosEven),
+  val zerosEven: DFAState[Int] = new TransitionMapDFAState[Int](
+    Map(0 -> zerosOdd, 1 -> zerosEven),
     true)
-  lazy val zerosOdd: DFAState[Int] = new TransitionMapDFAState[Int](
-    () => Map(0 -> zerosEven, 1 -> zerosOdd),
+  val zerosOdd: DFAState[Int] = new TransitionMapDFAState[Int](
+    Map(0 -> zerosEven, 1 -> zerosOdd),
     false)
 
   val evenZerosDFA = new DFA(zerosEven, List(zerosEven, zerosOdd))
 
-  lazy val onesEven: DFAState[Int] = new TransitionMapDFAState[Int](
-    () => Map(0 -> onesEven, 1 -> onesOdd),
+  val onesEven: DFAState[Int] = new TransitionMapDFAState[Int](
+    Map(0 -> onesEven, 1 -> onesOdd),
     true)
-  lazy val onesOdd: DFAState[Int] = new TransitionMapDFAState[Int](
-    () => Map(0 -> onesOdd, 1 -> onesEven),
+  val onesOdd: DFAState[Int] = new TransitionMapDFAState[Int](
+    Map(0 -> onesOdd, 1 -> onesEven),
     false)
 
   val evenOnesDFA = new DFA(onesEven, List(onesEven, onesOdd))
 
-  lazy val over = LoopDFAState[Int](false, List(0, 1))
+  val over = LoopDFAState[Int](false, List(0, 1))
 
-  lazy val lastWasZero = new TransitionMapDFAState[Int](
-    () => Map(0 -> over, 1 -> lastWasOne),
+  val lastWasZero = new TransitionMapDFAState[Int](
+    Map(0 -> over, 1 -> lastWasOne),
     true)
 
-  lazy val lastWasOne: DFAState[Int] = new TransitionMapDFAState[Int](
-    () => Map(0 -> lastWasZero, 1 -> over),
+  val lastWasOne: DFAState[Int] = new TransitionMapDFAState[Int](
+    Map(0 -> lastWasZero, 1 -> over),
     true)
 
   val noConsecutiveStart = new TransitionMapDFAState[Int](
-    () => Map(0 -> lastWasZero, 1 -> lastWasOne),
+    Map(0 -> lastWasZero, 1 -> lastWasOne),
     true)
 
   val noConsecutive = new DFA(
     noConsecutiveStart,
     List(noConsecutiveStart, lastWasZero, lastWasOne, over))
 
-  lazy val done = TransitionMapDFAState[Int](
-    () => Map(0 -> over, 1 -> over),
+  val done = new TransitionMapDFAState[Int](
+    Map(0 -> over, 1 -> over),
     true)
   val one = new TransitionMapDFAState[Int](
-    () => Map(0 -> over, 1 -> done),
+    Map(0 -> over, 1 -> done),
     false)
   val oh = new TransitionMapDFAState[Int](
-    () => Map(0 -> one, 1 -> over),
+    Map(0 -> one, 1 -> over),
     false)
   val startState = new TransitionMapDFAState[Int](
-    () => Map(0 -> over, 1 -> oh),
+    Map(0 -> over, 1 -> oh),
     false)
   var oneOhOne = new DFA(
     startState,

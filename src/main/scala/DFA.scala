@@ -20,10 +20,10 @@ case class LoopDFAState[AlphabetType](
     (alphabetElem, this)).toMap
 }
 
-case class TransitionMapDFAState[AlphabetType](
-    transitionMapFunction: () => Map[AlphabetType, DFAState[AlphabetType]],
-    isAcceptState: Boolean) extends DFAState[AlphabetType] {
-  lazy val transitionMap = transitionMapFunction()
+class TransitionMapDFAState[AlphabetType](
+    transitionMapFunction: => Map[AlphabetType, DFAState[AlphabetType]],
+    val isAcceptState: Boolean) extends DFAState[AlphabetType] {
+  lazy val transitionMap = transitionMapFunction
   def transition(alphabetMember: AlphabetType): DFAState[AlphabetType] = 
     this.transitionMap get alphabetMember match {
       case Some(dfaState) => dfaState
@@ -106,8 +106,8 @@ class DFACombiner[AlphabetType](
   }
 
   def buildState(leftState: State, rightState: State): State = {
-    TransitionMapDFAState[AlphabetType](
-      () => combinedAlphabets.map((alphabetElem: AlphabetType) => {
+    new TransitionMapDFAState[AlphabetType](
+      combinedAlphabets.map((alphabetElem: AlphabetType) => {
         val newLeftState = leftState.transitionMap.get(alphabetElem) match {
           case Some(newState) => newState
           case None => leftUnrecognized
