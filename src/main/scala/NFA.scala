@@ -78,7 +78,8 @@ class Kleene[T](nfa: NFA[T]) extends CachedStateBuilder[NFAState, NFAState, T] {
     }
     val newState: State = new TransitionMapNFAState[T](
       transitionMap.map({case (element, states) => {
-        var newStates = states.map((elementState) => stateCache(List(elementState)))
+        var newStates = states.map((elementState) =>
+          stateCache(List(elementState)))
         newStates = element match {
           case a: NonEmpty[T] =>  newStates
           case Epsilon => if (state.isAcceptState) {

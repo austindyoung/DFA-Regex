@@ -57,7 +57,6 @@ class DFA[AlphabetType](
     word.foldLeft(startState)(
       (currentState: DFAState[AlphabetType], elem: AlphabetType) => {
         val nextState = currentState.transition(elem)
-        println(nextState.transitionMap)
         nextState
     }).isAcceptState
   }
