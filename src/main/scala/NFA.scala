@@ -128,8 +128,8 @@ class Concatenator[T](nfas: NFA[T]*) {
     new NFA[T](
       oldStateToNewState((firstNFA.startState, firstIndex)),
       oldStateToNewState.values,
-      nfas.head.alphabet
-    )
+      nfas.foldLeft(new immutable.HashSet[Alphabet[T]]())((soFar, nfa) =>
+        soFar ++ nfa.alphabet))
   }
 
   def linkStates(left: (NFA[T], Int), right: (NFA[T], Int)) = {
