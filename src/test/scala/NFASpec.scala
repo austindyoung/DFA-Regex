@@ -156,5 +156,20 @@ class NFASpec extends FunSpec {
       assert(NFA.evaluate("ababa"))
       assert(NFA.evaluate("ba"))
     }
+
+    it("doesn't have strange behavior when non-accept start state is reachable") {
+      lazy val notB: TransitionMapNFAState[Char] = new TransitionMapNFAState[Char](
+        Map(NonEmpty('a') -> List(notB), NonEmpty('b') -> List(b)),
+        false)
+      lazy val b: TransitionMapNFAState[Char] = new TransitionMapNFAState[Char](
+        Map(NonEmpty('a') -> List(notB), NonEmpty('b') -> List(b)),
+        true)
+      val endsWithB = new NFA[Char](notB, List(notB, b), List(NonEmpty('a'), NonEmpty('b'), Epsilon))
+      assert(!endsWithB.evaluate("a"))
+      assert(!endsWithB.evaluate(""))
+      assert(endsWithB.evaluate("aaaaaaaab"))
+      assert(!endsWithB.*.evaluate("a"))
+      assert(endsWithB.*.evaluate(""))
+    }
   }
 }
