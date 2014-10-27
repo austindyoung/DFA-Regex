@@ -6,10 +6,7 @@ version := "0.0.1"
 
 scalaVersion := "2.11.2"
 
-libraryDependencies ++= Seq(
-  "org.scalatest" % "scalatest_2.10" % "2.0" % "test" withSources() withJavadoc(),
-  "org.scalacheck" %% "scalacheck" % "1.10.0" % "test" withSources() withJavadoc()
-)
+libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.1" % "test"
 
 initialCommands := "import com.austinyoung.dfaregex._"
 
