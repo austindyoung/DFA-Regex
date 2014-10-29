@@ -3,7 +3,6 @@ package com.austinyoung.dfaregex
 import org.scalatest.FunSpec
 
 class DFASpec extends FunSpec {
-
   val zerosEven: DFAState[Int] = new TransitionMapDFAState[Int](
     Map(0 -> zerosOdd, 1 -> zerosEven),
     true)

@@ -1,7 +1,13 @@
 package com.austinyoung.dfaregex
 
+import scala.collection.immutable.HashSet
+
 abstract class Regex[T]
 case class Word[T](content: Seq[T]) extends Regex[T]
+case class Lang[T](language: HashSet[Seq[T]]) extends Regex[T]
+case class *[T](regex: Regex[T]) extends Regex[T] 
+case class U[T](regex1: Regex[T], regex2: Regex[T]) extends Regex[T]
+case class o[T](regex1: Regex[T], regex2: Regex[T]) extends Regex[T]
 
 object REPLDFA {
   def justChar(character: Char) = {
