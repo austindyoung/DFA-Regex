@@ -16,13 +16,13 @@ case class Word[T](content: Seq[T]) extends Regex[T] {
     new NFA[T](states.head, states, content.toSet.map((letter: T) => (NonEmpty(letter))))
   }
 }
-case class *[T](regex: Regex[T]) extends Regex[T] {
+case class Star[T](regex: Regex[T]) extends Regex[T] {
   def toNFA = regex.toNFA.*
 }
-case class U[T](regex1: Regex[T], regex2: Regex[T]) extends Regex[T] {
+case class Union[T](regex1: Regex[T], regex2: Regex[T]) extends Regex[T] {
   def toNFA = regex1.toNFA //regex1.toNFA.union(regex2.toNFA)
 }
-case class +[T](regex1: Regex[T], regex2: Regex[T]) extends Regex[T] {
+case class Concat[T](regex1: Regex[T], regex2: Regex[T]) extends Regex[T] {
   def toNFA = regex1.toNFA.+(regex2.toNFA)
 }
 object REPLDFA {
