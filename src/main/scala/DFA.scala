@@ -21,9 +21,9 @@ case class LoopDFAState[AlphabetType](
 }
 
 class TransitionMapDFAState[AlphabetType](
-    transitionMapFunction: => Map[AlphabetType, DFAState[AlphabetType]],
+    _transitionMap: => Map[AlphabetType, DFAState[AlphabetType]],
     val isAcceptState: Boolean) extends DFAState[AlphabetType] {
-  lazy val transitionMap = transitionMapFunction
+  lazy val transitionMap = _transitionMap
   def transition(alphabetMember: AlphabetType): DFAState[AlphabetType] = 
     this.transitionMap get alphabetMember match {
       case Some(dfaState) => dfaState
