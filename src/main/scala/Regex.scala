@@ -4,24 +4,26 @@ import scala.collection._
 import scala.collection.immutable
 
 abstract class Regex[T] {
-  def toDFA: DFA[T]
+  def toNFA: NFA[T]
+  def toDFA: DFA[T] = toNFA.DFA
 }
+
 case class Word[T](content: Seq[T]) extends Regex[T] {
-  def toDFA = {
-  val op = (letter: T, stateList: List[NFAState[T]]) => (new TransitionMapNFAState[T](Map(letter -> stateList.head), false)) :: stateList
-  val states = content.foldRight(List(finalState))(op)
-  lazy val finalState: NFAState[T] = new TransitionMapNFAState(Map(),true)
-  (new NFA[T](states.head, states, content.toSet.map((letter: T) => (NonEmpty(letter))))).DFA
+  val op = (letter: T, stateList: List[NFAState[T]]) =>
+    new TransitionMapNFAState[T](Map(NonEmpty(letter) -> List(stateList.head)), false) :: stateList;
+  def toNFA = {
+    val states = content.foldRight(List[NFAState[T]](new TransitionMapNFAState[T](Map(), true)))(op)
+    new NFA[T](states.head, states, content.toSet.map((letter: T) => (NonEmpty(letter))))
   }
 }
 case class *[T](regex: Regex[T]) extends Regex[T] {
-  def toDFA = regex.toDFA.*
+  def toNFA = regex.toNFA.*
 }
 case class U[T](regex1: Regex[T], regex2: Regex[T]) extends Regex[T] {
-  def toDFA = regex1.toDFA.union(regex2.toDFA)
+  def toNFA = regex1.toNFA //regex1.toNFA.union(regex2.toNFA)
 }
 case class +[T](regex1: Regex[T], regex2: Regex[T]) extends Regex[T] {
-  def toDFA = regex1.toDFA.+(regex2.toDFA)
+  def toNFA = regex1.toNFA.+(regex2.toNFA)
 }
 object REPLDFA {
   def justChar(character: Char) = {
