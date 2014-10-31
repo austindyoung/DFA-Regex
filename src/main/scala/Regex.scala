@@ -9,21 +9,21 @@ abstract class Regex[T] {
 }
 
 case class Word[T](content: Seq[T]) extends Regex[T] {
-  val op = (letter: T, stateList: List[NFAState[T]]) =>
+  val addLeft = (letter: T, stateList: List[NFAState[T]]) =>
     new TransitionMapNFAState[T](Map(NonEmpty(letter) -> List(stateList.head)), false) :: stateList;
   def toNFA = {
-    val states = content.foldRight(List[NFAState[T]](new TransitionMapNFAState[T](Map(), true)))(op)
+    val states = content.foldRight(List[NFAState[T]](new TransitionMapNFAState[T](Map(), true)))(addLeft)
     new NFA[T](states.head, states, content.toSet.map((letter: T) => (NonEmpty(letter))))
   }
 }
-case class Star[T](regex: Regex[T]) extends Regex[T] {
-  def toNFA = regex.toNFA.*
+case class Star[T](content: Regex[T]) extends Regex[T] {
+  def toNFA = content.toNFA.*
 }
-case class Union[T](regex1: Regex[T], regex2: Regex[T]) extends Regex[T] {
-  def toNFA = regex1.toNFA //regex1.toNFA.union(regex2.toNFA)
+case class Union[T](left: Regex[T], right: Regex[T]) extends Regex[T] {
+  def toNFA = left.toNFA.union(right.toNFA)
 }
-case class Concat[T](regex1: Regex[T], regex2: Regex[T]) extends Regex[T] {
-  def toNFA = regex1.toNFA.+(regex2.toNFA)
+case class Concat[T](left: Regex[T], right: Regex[T]) extends Regex[T] {
+  def toNFA = left.toNFA.+(right.toNFA)
 }
 object REPLDFA {
   def justChar(character: Char) = {
