@@ -30,6 +30,7 @@ class NFA[T](
   val states = immutable.HashSet[NFAState[T]]() ++ _states
 
   def evaluate = this.DFA.evaluate _
+  def union(nfas: NFA[T]*) = DFA.union(nfas.map((nfa: NFA[T]) => nfa.DFA)).NFA
   def * = new Kleene(this).kleene
   def +(nfas: NFA[T]*) = new Concatenator(this +: nfas:_*).concatenate
   def *+ = new Kleene(this, true).kleene

@@ -65,7 +65,7 @@ class DFA[AlphabetType](
     new DFACombiner(this, that, op).combine
   }
 
-  def union = combine((left: Boolean, right: Boolean) => left || right)_
+  def union(dfas: DFA[AlphabetType]*) = new DFAArbitraryArgCombiner((left: Boolean, right: Boolean) => left || right, this, dfas).arbitraryCombine()
   def intersect = combine((left: Boolean, right: Boolean) => left && right)_
   def takeAway = combine((left: Boolean, right: Boolean) => left && !right)_
   def exteriorProd = combine((left: Boolean, right: Boolean) => left != right)_
@@ -99,6 +99,13 @@ class DFAToNFA[T](dfa: DFA[T]) extends CachedStateBuilder[DFAState, NFAState, T]
   }
 }
 
+class DFAArbitraryArgCombiner[AlphabetType](
+  op: (Boolean, Boolean) => Boolean,
+  head: DFA[AlphabetType],
+  dfas: DFA[AlphabetType]*) {
+  def arbitraryCombine(): DFA[AlphabetType] = dfas.fold(head)((left: DFA[AlphabetType], right: DFA[AlphabetType]) => new DFACombiner(left, right, op).combine())
+}
+
 class DFACombiner[AlphabetType](
     left: DFA[AlphabetType],
     right: DFA[AlphabetType],
@@ -107,7 +114,9 @@ class DFACombiner[AlphabetType](
   type State = DFAState[AlphabetType]
 
   lazy val combinedAlphabets = left.alphabet ++ right.alphabet
+
   lazy val rightUnrecognized = LoopDFAState[AlphabetType](false, right.alphabet)
+
   lazy val leftUnrecognized = LoopDFAState[AlphabetType](false, left.alphabet)
 
   private val stateCache: mutable.Map[(State, State), State] =
