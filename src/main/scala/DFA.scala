@@ -61,14 +61,18 @@ class DFA[AlphabetType](
     }).isAcceptState
   }
 
-  private def combine(op: (Boolean, Boolean) => Boolean)(dfas: DFA[AlphabetType]*) = {
+  private def combine(op: (Boolean, Boolean) => Boolean)(dfas: Seq[DFA[AlphabetType]]) = {
     new DFACombiner(this +: dfas, op).combine
   }
 
-  def union = combine((left: Boolean, right: Boolean) => left || right)_
-  def intersect = combine((left: Boolean, right: Boolean) => left && right)_
-  def takeAway = combine((left: Boolean, right: Boolean) => left && !right)_
-  def exteriorProd = combine((left: Boolean, right: Boolean) => left != right)_
+  def union(dfas: DFA[AlphabetType]*) = combine(
+    (left: Boolean, right: Boolean) => left || right)(dfas)
+  def intersect(dfas: DFA[AlphabetType]*) = combine(
+    (left: Boolean, right: Boolean) => left && right)(dfas)
+  def takeAway(dfas: DFA[AlphabetType]*) = combine(
+    (left: Boolean, right: Boolean) => left && !right)(dfas)
+  def exteriorProd(dfas: DFA[AlphabetType]*) = combine(
+    (left: Boolean, right: Boolean) => left != right)(dfas)
 
   lazy val NFA = new DFAToNFA(this).NFA
 
@@ -100,23 +104,26 @@ class DFAToNFA[T](dfa: DFA[T]) extends CachedStateBuilder[DFAState, NFAState, T]
 }
 
 class DFACombiner[AlphabetType](
-    dfas: Iterable[DFA[AlphabetType]],
-    operation: (Boolean, Boolean) => Boolean)
+  dfas: Iterable[DFA[AlphabetType]],
+  operation: (Boolean, Boolean) => Boolean)
     extends CachedStateBuilder[DFAState, DFAState, AlphabetType] {
 
   type State = DFAState[AlphabetType]
 
-  lazy val combinedAlphabets = dfas.map(
-    (dfa) => dfa.alphabet.toSet).reduce((alphabet1, alphabet2) => 
+  val combinedAlphabets = dfas.map(
+    (dfa) => dfa.alphabet.toSet).reduce((alphabet1, alphabet2) =>
     alphabet1.union(alphabet2)).toIterable
 
-  lazy val statesUnrecognizedMap = dfas.map((dfa: DFA[AlphabetType]) => 
-    (dfa, new LoopDFAState[AlphabetType](false, dfa.alphabet))).toMap
+  val sinkState = new LoopDFAState[AlphabetType](false, combinedAlphabets)
 
   def combine(): DFA[AlphabetType] = {
+    // TODO(@IvanMalison) It might be better to this by Queue/BFSing it up
+    // This approach could lead to the generation of a huge number of states that
+    // can never be reached. Think about the case of generating the union of a DFA
+    // with itself 10 times.
     val cartesianProduct = dfas.foldLeft(
       new immutable.HashSet[List[State]]() ++ List(Nil))((soFar, dfa) =>
-        soFar.flatMap(states => dfa.states.map(state => state :: states)))
+      soFar.flatMap(states => dfa.states.map(state => state :: states)))
     new DFA[AlphabetType](
       getState(dfas.map(dfa => dfa.startState)),
       cartesianProduct.map(stateList => getState(stateList)),
@@ -126,14 +133,15 @@ class DFACombiner[AlphabetType](
   def buildState(states: Iterable[State]): State = {
     new TransitionMapDFAState[AlphabetType](
       combinedAlphabets.map((alphabetElem) => {
-        val destStates = states.map((state: State) => 
+        val destStates = states.map((state: State) =>
           state.transitionMap.get(alphabetElem) match {
-          case Some(destState) => destState
-          case None => statesUnrecognizedMap.get()
-        })
-        (alphabetElem, this.getState(destStates))
+            case Some(destState) => destState
+            case None => sinkState
+          })
+        (alphabetElem, getState(destStates))
       }).toMap,
-      destStates.reduce(this.operation))
+      states.map(state => state.isAcceptState).reduce((left, right) => operation(left, right))
+    )
   }
 }
 
