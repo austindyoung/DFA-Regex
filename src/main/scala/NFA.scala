@@ -30,7 +30,7 @@ class NFA[T](
   val states = immutable.HashSet[NFAState[T]]() ++ _states
 
   def evaluate = this.DFA.evaluate _
-  def union(nfas: NFA[T]*) = DFA.union((nfas.map((nfa: NFA[T]) => nfa.DFA)):_*).NFA
+  def union(nfas: NFA[T]*) = DFA.union(nfas.map(nfa => nfa.DFA): _*).NFA
   def * = new Kleene(this).kleene
   def +(nfas: NFA[T]*) = new Concatenator(this +: nfas:_*).concatenate
   def *+ = new Kleene(this, true).kleene
@@ -143,7 +143,7 @@ class Concatenator[T](nfas: NFA[T]*) {
           state,
           leftIndex,
           if(state.isAcceptState) Some(rightNFA.startState) else None))
-        }
+    }
     left
   }
   
@@ -156,7 +156,7 @@ class Concatenator[T](nfas: NFA[T]*) {
     }
     new TransitionMapNFAState[T](
       transitionMap.map({case (element, states) => {
-        var newStates = states.map((elementState) => 
+        var newStates = states.map((elementState) =>
           oldStateToNewState((elementState, nfaIndex)))
         newStates = element match {
           case a: NonEmpty[T] =>  newStates
@@ -195,15 +195,15 @@ class NFAToDFA[T](nfa: NFA[T]) extends CachedStateBuilder[NFAState, DFAState, T]
 
   def buildState(states: Iterable[SourceState]): DestState = {
     new TransitionMapDFAState[T](
-        nfa.alphabet.collect({case element: NonEmpty[T] => {
-          (element.value, getState(getClosure(states, element)))
-        }}).toMap,
+      nfa.alphabet.collect({case element: NonEmpty[T] => {
+        (element.value, getState(getClosure(states, element)))
+      }}).toMap,
       states.exists((state) => state.isAcceptState))
   }
 
   def getClosure(
-      states: Iterable[SourceState],
-      element: Alphabet[T]): Iterable[SourceState] = {
+    states: Iterable[SourceState],
+    element: Alphabet[T]): Iterable[SourceState] = {
     getEpsilonClosure(states.flatMap((state) =>
       (state.transitionMap get element) match {
         case Some(elements) => elements
@@ -221,11 +221,11 @@ class NFAToDFA[T](nfa: NFA[T]) extends CachedStateBuilder[NFAState, DFAState, T]
       lastStates = thisStates
       thisStates = thisStates ++ lastGeneration
     } while(lastStates != thisStates)
-    thisStates
+      thisStates
   }
 
   private def getEpsilonClosureOneLvl(
-      states: Iterable[SourceState]): Iterable[SourceState] = {
+    states: Iterable[SourceState]): Iterable[SourceState] = {
     states.flatMap((state) => state.transitionMap get Epsilon match {
       case Some(elements) => elements
       case None => List()

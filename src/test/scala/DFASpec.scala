@@ -69,7 +69,7 @@ class DFASpec extends FunSpec {
   }
   describe("DFA") {
 
-   it("supports intersect") {
+    it("supports intersect") {
       val bothEvenDFA = evenZerosDFA.intersect(evenOnesDFA)
       assert(bothEvenDFA.evaluate(List(0, 1, 0, 1)))
       assert(!bothEvenDFA.evaluate(List(0, 1, 0, 1, 1, 0)))
