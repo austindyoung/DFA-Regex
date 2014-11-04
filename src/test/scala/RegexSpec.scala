@@ -15,33 +15,46 @@ class RegexSpec extends FunSpec {
      assert(numWord.content == numSeq)
    }
 
-   it("Complex node constructed") {
-     val leftCharWord = "left"
-     val rightCharWord = "right"
-     val leftIntWord = List(0, 0)
-     val rightIntWord = List(0, 1)
-     
+     val leftCharSeq = "left"
+     val rightCharSeq = "right"
+     val leftIntSeq = List(0, 0)
+     val rightIntSeq = List(0, 1)
+
+     val leftCharWord = new Word(leftCharSeq)
+     val rightCharWord = new Word(rightCharSeq)
+     val leftIntWord = new Word(leftIntSeq)
+     val rightIntWord = new Word(rightIntSeq)
+    it("supports second-order node construction") {
      val starChar = new Star[Char](leftCharWord)
      val starInt = new Star[Int](leftIntWord)
-     assert(starChar.left == leftCharWord)
-     assert(starChar.right == rightCharWord)
-     assert(starInt.left == leftIntWord)
-     assert(starInt.right == rightIntWord)
-
+     assert(starChar.content == leftCharWord)
+     assert(starInt.content == leftIntWord)
 
      val unionChar = new Union[Char](leftCharWord, rightCharWord)
-     val unionInt = new Union[Char](leftIntWord, rightIntWord)
+     val unionInt = new Union[Int](leftIntWord, rightIntWord)
      assert(unionChar.left == leftCharWord)
      assert(unionChar.right == rightCharWord)
      assert(unionInt.left == leftIntWord)
      assert(unionInt.right == rightIntWord)
 
      val concatChar = new Concat[Char](leftCharWord, rightCharWord)
-     val concatInt = new Concat[Int](leftIntword, rightIntWord)
+     val concatInt = new Concat[Int](leftIntWord, rightIntWord)
      assert(concatChar.left == leftCharWord)
      assert(concatChar.right == rightCharWord)
      assert(concatInt.left == leftIntWord)
      assert(concatInt.right == rightIntWord)
+    }
+   it("supports conversion to DFA") {
+     val evenZerosRegex = new Concat[Int](new Star(new Word(List(1))), new Concat(new Star(new Concat(new Word(List(0)), new Concat(new Star(new Word(List(1))), new Word(List(0))))), new Star(new Word(List(1)))))
+
+     val evenZerosDFAFromRegex = evenZerosRegex.toDFA
+     assert(evenZerosDFAFromRegex.evaluate(Nil))
+     assert(!evenZerosDFAFromRegex.evaluate(List(0)))
+     assert(evenZerosDFAFromRegex.evaluate(List(0, 0)))
+     assert(evenZerosDFAFromRegex.evaluate(List(0, 1, 0)))
+     assert(!evenZerosDFAFromRegex.evaluate(List(1, 0, 1)))
+
+     assert(evenZerosRegex.left == new Star(new Word(List(1))))
    }
   }
 }
