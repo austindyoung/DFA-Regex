@@ -61,11 +61,11 @@ class DFA[AlphabetType](
     }).isAcceptState
   }
 
-  private def combine(op: (Boolean, Boolean) => Boolean)(that: DFA[AlphabetType]) = {
-    new DFACombiner(this, that, op).combine
+  private def combine(op: (Boolean, Boolean) => Boolean)(dfas: DFA[AlphabetType]*) = {
+    new DFACombiner(this +: dfas, op).combine
   }
 
-  def union(dfas: DFA[AlphabetType]*) = new DFAArbitraryArgCombiner((left: Boolean, right: Boolean) => left || right, this, dfas).arbitraryCombine()
+  def union = combine((left: Boolean, right: Boolean) => left || right)_
   def intersect = combine((left: Boolean, right: Boolean) => left && right)_
   def takeAway = combine((left: Boolean, right: Boolean) => left && !right)_
   def exteriorProd = combine((left: Boolean, right: Boolean) => left != right)_
@@ -100,36 +100,41 @@ class DFAToNFA[T](dfa: DFA[T]) extends CachedStateBuilder[DFAState, NFAState, T]
 }
 
 class DFACombiner[AlphabetType](
-    dfas: List[DFA[AlphabetType]],
-    operation: (Boolean, Boolean) => Boolean) extends CachedStateBuilder {
+    dfas: Iterable[DFA[AlphabetType]],
+    operation: (Boolean, Boolean) => Boolean)
+    extends CachedStateBuilder[DFAState, DFAState, AlphabetType] {
 
   type State = DFAState[AlphabetType]
 
-  lazy val combinedAlphabets = dfas.map((dfa: DFA[AlphabetType]) => dfa.alphabet.toSet).reduce((alphabet1: Set[AlphabetType], alphabet2: Set[AlphabetType]) => alphabet1.union(alphabet2)).toIterable
+  lazy val combinedAlphabets = dfas.map(
+    (dfa) => dfa.alphabet.toSet).reduce((alphabet1, alphabet2) => 
+    alphabet1.union(alphabet2)).toIterable
 
-  lazy val statesUnrecognizedMap = dfas.map((dfa: DFA[AlphabetType]) => (dfa, new LoopDFAState[AplhabetType](false, dfa.alphabet))).toMap
+  lazy val statesUnrecognizedMap = dfas.map((dfa: DFA[AlphabetType]) => 
+    (dfa, new LoopDFAState[AlphabetType](false, dfa.alphabet))).toMap
 
   def combine(): DFA[AlphabetType] = {
-    val cartesianProd = (dfa: DFA[AlphabetType], productsSet: List[List[State]]) => (dfa.states ++ List(new LoopDFAState[AlphabetType](false, dfa.alphabet))).flatMap(
-      (leftState: State) => productsSet.map((product: List[State]) => leftState :: product))
-    val newStates = dfas.foldRight(Nil, cartesianProd).map(getState(_))
-    new DFA(
-      getState(dfas.map((dfa: DFA[AlphabetType]) => dfa.startState)),
-      newStates,
-      combinedAlphabets)
+    val cartesianProduct = dfas.foldLeft(
+      new immutable.HashSet[List[State]]() ++ List(Nil))((soFar, dfa) =>
+        soFar.flatMap(states => dfa.states.map(state => state :: states)))
+    new DFA[AlphabetType](
+      getState(dfas.map(dfa => dfa.startState)),
+      cartesianProduct.map(stateList => getState(stateList)),
+      Some(combinedAlphabets))
   }
 
   def buildState(states: Iterable[State]): State = {
-        new TransitionMapDFAState[AlphabetType](
-          combinedAlphabets.map((alphabetElem: AlphabetType) => {
-            val destStates = states.map((state: State) => state.transitionMap.get(alphabetElem) match {
-              case Some(destState) => destState
-              case None => statesUnrecognizedMap.get(destState).get
-            })
-            (alphabetElem, this.getState(destStates))
-          }).toMap,
-          destStates.reduce(this.operation))
-          }
+    new TransitionMapDFAState[AlphabetType](
+      combinedAlphabets.map((alphabetElem) => {
+        val destStates = states.map((state: State) => 
+          state.transitionMap.get(alphabetElem) match {
+          case Some(destState) => destState
+          case None => statesUnrecognizedMap.get()
+        })
+        (alphabetElem, this.getState(destStates))
+      }).toMap,
+      destStates.reduce(this.operation))
+  }
 }
 
 
