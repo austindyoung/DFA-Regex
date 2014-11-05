@@ -96,6 +96,16 @@ class DFASpec extends FunSpec {
       assert(anyCondition.evaluate(List(1, 1, 0)))
       assert(anyCondition.evaluate(List(1, 0)))
     }
+      it("supports arbitrary unions") {
+        val evenZerosSelfUnion = evenZerosDFA.union(evenZerosDFA, evenZerosDFA)
+        assert(!evenZerosSelfUnion.evaluate(List(1,0,1)))
+        assert(evenZerosSelfUnion.evaluate(List(1, 1)))
+        val evenZerosOrOneOhOneOrNoConsecutive = evenZerosDFA.union(oneOhOne, noConsecutive)
+        assert(evenZerosOrOneOhOneOrNoConsecutive.evaluate(Nil))
+        assert(evenZerosOrOneOhOneOrNoConsecutive.evaluate(List(1, 0)))
+        assert(evenZerosOrOneOhOneOrNoConsecutive.evaluate(List(1, 0, 1)))
+        assert(!evenZerosOrOneOhOneOrNoConsecutive.evaluate(List(0, 1, 1)))
+      }
 
     it("converts to an NFA") {
       val eitherEvenNFA = evenZerosDFA.union(evenOnesDFA).NFA
