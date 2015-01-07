@@ -210,9 +210,9 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
 
 
 /** T | E */
-   def parseT_OR_E(fail: Int, last: Int) = {
+   def parseT_OR_E(last: Int) = {
 
-    val left = T(fail - 1)
+    val left = T(failed - 1)
     if (left != None) {
       if (OR) {
         val right = E(last)
@@ -256,9 +256,9 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
 }
 
 /** (E) T */
-  def parseOPEN_E_CLOSE_T(fail: Int, last: Int) = {
+  def parseOPEN_E_CLOSE_T(last: Int) = {
     
-    val left = parseOPEN_E_CLOSE(fail)
+    val left = parseOPEN_E_CLOSE(failed)
     if (left != None) {
       val t = T(last)
       if (t != None) Some(new Concat[T](left.get, t.get))
@@ -269,9 +269,9 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
 
   
 /** (E)* T */
-  def parseOPEN_E_CLOSE_STAR_T(fail: Int, last: Int) = {
+  def parseOPEN_E_CLOSE_STAR_T(last: Int) = {
     
-    val left = parseOPEN_E_CLOSE(fail - 1)
+    val left = parseOPEN_E_CLOSE(failed - 1)
     if (left != None) {
       if (STAR(fail)) {
         val t = T(last)
