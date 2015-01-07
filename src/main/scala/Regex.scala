@@ -40,10 +40,6 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
   }
 
   def E(last: Int): Option[Regex[T]] = {
-    println("enter E")
-    println(next)
-    println(failed)
-
     if (last < next || last >= stream.size) None
     else {
     val save = next
@@ -59,9 +55,6 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
   }
   
   def T(last: Int): Option[Regex[T]] = {
-    println("enter T")
-    println(next)
-    println(failed)
 
     if (last < next || last >= stream.size) None
     else {
@@ -130,301 +123,132 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
     if (next > end || end >= stream.size) false
     else {
     stream(next) match {
-      case Left(x) => {
-        println(next)
-        println("X")
-        println(failed)
-        false
-      }
-      case Right(char) => {
-        if (char == op) true
-        else {println('X'); false}
+      case Left(x) => false
+      case Right(char) => char == op
       }
     }
     }
   }
 
-  def OR = { println("enter or"); opToken('|') }
+  def OR = opToken('|')
 
-  def OPEN = { println("enter open"); opToken('(') }
-
-  def CLOSE = { println("enter close"); opToken(')') }
+  def OPEN = opToken('(')
+  
+  def CLOSE = opToken(')')
 
   def STAR(last: Int) = {
     next = next + 1
     if (next > last || last >= stream.size) false
     else {
-    println("enter *")
 
     if (next == last) {
       val eitherToken = stream(next)
         eitherToken match {
-        case Left(x) => {
-          println("*")
-          println(next)
-          println(failed)
-          println("X")
-          false
-        }
+        case Left(x) => false
         case Right(x) => {
-          println("*")
-          println(next)
-          println(failed)
           if (x == '*') true
-          else { println('X'); false}
+          else false
         }
         }
     }
-    else {
-      println("*")
-      println(next)
-      println(failed)
-      println("X")
-      false
-    }
+    else false
     }
   }
 
   def LETTER(last: Int) = {
-    println("enter letter")
     next = next + 1
     if (next > last || last >= stream.size) None
     else {
     if (next == last) {
       stream(next) match {
-        case Left(x) => {
-          println("letter")
-          println(failed)
-          println(next)
-          Some(new Word(List(x)))
-        }
-        case Right(x) => {
-          println("letter")
-          println(next)
-          println(failed)
-          println("X")
-          None
-        }
+        case Left(x) => Some(new Word(List(x)))
+        case Right(x) => None
       }
     }
-    else {
-      println("letter")
-      println(next)
-      println(failed)
-      println("X")
-      None
-    }
+    else None
     }
   }
 
 /** LETTER* */
   def parseLETTER_STAR(last: Int) = {
-    println("enter letter*")
 
     val letter = LETTER(last - 1)
     if (letter != None) {
-      if (STAR(last)) {
-        println("letter*")
-        println(next)
-        println(failed)
-        Some(new Star(letter.get))
-      }
-      else {
-        println("letter*")
-        println(next)
-        println(failed)
-        println("X")
-        None
-      }
+      if (STAR(last)) Some(new Star(letter.get))
+      else None
     }
-    else {
-      println("letter*")
-      println(next)
-      println(failed)
-      println("X")
-      None
-    }
+    else None
   }
 
 /** LETTER T */
   def parseLETTER_T(last: Int) = {
 
-    println("enter letter T")
-
     val left = LETTER(next + 1)
     if (left != None) {
       val right = T(last)
-      if (right != None) {
-        println("letter T")
-        println(next)
-        println(failed)
-        Some(new Concat[T](left.get, right.get))
-      }
-      else {
-        println("letter T")
-        println(next)
-        println(failed)
-        println("X")
-        None
-      }
+      if (right != None) Some(new Concat[T](left.get, right.get))
+      else None
     }
-    else {
-      println("letter T")
-      println(next)
-      println(failed)
-      println("X")
-      None
-    }
+    else None
   }
 
 /** LETTER* T */
   def parseLETTER_STAR_T(last: Int) = {
 
-    println("enter letter* T")
-
     val letter = LETTER(next + 1)
     if (letter != None) {
       if (STAR(next + 1)) {
         val t = T(last)
-        if (t != None) {
-          println("letter* T")
-          println(next)
-          println(failed)
-          Some(new Concat[T](new Star[T](letter.get), t.get))
-        }
-        else {
-          println("letter* T")
-          println(next)
-          println(failed)
-          println("X")
-          None
-        }
+        if (t != None)Some(new Concat[T](new Star[T](letter.get), t.get))
+        else None
       }
-      else {
-        println("letter* T")
-        println(next)
-        println(failed)
-        println('X')
-        None
-      }
+      else None
     }
-    else {
-      println("letter* T")
-      println(next)
-      println(failed)
-      println("X")
-      None
-    }
+    else None
   }
 
 
 
 /** T | E */
    def parseT_OR_E(fail: Int, last: Int) = {
-     println("enter T | E")
 
     val left = T(fail - 1)
     if (left != None) {
       if (OR) {
         val right = E(last)
-        if (right != None) {
-          println("T | E")
-          println(next)
-          println(failed)
-          Some(new Union(left.get, right.get))
-        }
-        else {
-          println("T | E")
-          println(next)
-          println(failed)       
-          println("X")
-          None
-        }
+        if (right != None) Some(new Union(left.get, right.get))
+        else None
       }
-      else {
-        println("T | E")
-        println(next)
-        println(failed)
-        println("X")       
-        None
-      }
+      else None
     }
-    else {
-      println("T | E")
-      println(next)
-      println(failed)
-      println("X")
-      None
-    }
+    else None
   }
 
 /** (E) */
   def parseOPEN_E_CLOSE(last: Int) = {
 
-    println("enter (E)")
-
     if (OPEN) {
       val inside = E(last - 1)
       if (inside != None) {
-        if (CLOSE) {
-          println("(E)")
-          println(next)
-          println(failed)          
-          inside
-        }
-        else {
-          println("(E)")
-          println(next)
-          println(failed)       
-          println("X")
-          None
-        }
+        if (CLOSE) inside
+        else None
       }
-    else {
-      println("(E)")
-      println(next)
-      println(failed)
-      println("X")
-      None
+    else  None
     }
-    }
-    else {
-      println("(E)")
-      println(next)
-      println(failed)
-      println("X")
-      None
-  }
+    else None
   }
 
 /** (E)* */
   def parseOPEN_E_CLOSE_STAR(last: Int) = {
-    println("enter (E)*")
+   
     if (OPEN) {
       val inside = E(last - 2)
       if (inside != None) {
         if (CLOSE) {
-          if (STAR(next + 1)) {
-            println("(E)*")
-            println(next)
-            println(failed)
-            Some(new Star[T](inside.get))
-          }
-          else {
-            println("(E)*")
-            println(next)
-            println(failed)
-            println("X")
-            None 
-          }
+          if (STAR(next + 1)) Some(new Star[T](inside.get))
+          else None
         }
-        else {
-          println("(E)*")
-          println(next)
-          println(failed)
-          println("X")
-          None
-        }
+        else None
       }
       else None
     }
@@ -434,63 +258,27 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
 /** (E) T */
   def parseOPEN_E_CLOSE_T(fail: Int, last: Int) = {
     
-    println("enter (E) T")
     val left = parseOPEN_E_CLOSE(fail)
     if (left != None) {
       val t = T(last)
-      if (t != None) {
-        println("(E) T")
-        println(next)
-        println(failed)
-        Some(new Concat[T](left.get, t.get))
-      }
-      else {
-        println("(E) T")
-        println(next)
-        println(failed)
-        println('X')
-        None
-      }
+      if (t != None) Some(new Concat[T](left.get, t.get))
+      else None
     }
-    else {
-      println("(E) T")
-      println(next)
-      println(failed)
-      println('X')
-      None
-    }
+    else None
   }
 
   
 /** (E)* T */
   def parseOPEN_E_CLOSE_STAR_T(fail: Int, last: Int) = {
     
-    println("enter (E)* T")
     val left = parseOPEN_E_CLOSE(fail - 1)
     if (left != None) {
       if (STAR(fail)) {
         val t = T(last)
-        if (t != None) {
-          println("(E) T")
-          println(next)
-          println(failed)
-          Some(new Concat[T](new Star[T](left.get), t.get))
-        }
-        else {
-          println("(E) T")
-          println(next)
-          println(failed)
-          println('X')
-          None
-        }
+        if (t != None) Some(new Concat[T](new Star[T](left.get), t.get))
+        else  None
       }
-      else {
-        println("(E) T")
-        println(next)
-        println(failed)
-        println('X')
-        None
-      }
+      else  None
     }
     else None
   }
