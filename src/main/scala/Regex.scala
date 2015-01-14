@@ -23,7 +23,7 @@ case class Star[T](content: Regex[T]) extends Regex[T] {
   def toNFA = content.toNFA.*
 }
 
-/** represents disjunction/union of two language */
+/** represents disjunction/union of two languages */
 case class Union[T](left: Regex[T], right: Regex[T]) extends Regex[T] {
   def toNFA = left.toNFA.union(right.toNFA)
 }
