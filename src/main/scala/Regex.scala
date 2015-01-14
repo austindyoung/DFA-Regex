@@ -8,6 +8,7 @@ abstract class Regex[T] {
   def toDFA: DFA[T] = toNFA.DFA
 }
 
+/** object representing a string in an arbitrary langugae */
 case class Word[T](content: Seq[T]) extends Regex[T] {
   val addLeft = (letter: T, stateList: List[NFAState[T]]) =>
     new TransitionMapNFAState[T](Map(NonEmpty(letter) -> List(stateList.head)), false) :: stateList;
@@ -16,21 +17,33 @@ case class Word[T](content: Seq[T]) extends Regex[T] {
     new NFA[T](states.head, states, content.toSet.map((letter: T) => (NonEmpty(letter))))
   }
 }
+
+//** represents the kleene star of a language */
 case class Star[T](content: Regex[T]) extends Regex[T] {
   def toNFA = content.toNFA.*
 }
+
+/** represents disjunction/union of two language */
 case class Union[T](left: Regex[T], right: Regex[T]) extends Regex[T] {
   def toNFA = left.toNFA.union(right.toNFA)
 }
+
+/** represents concatenation of two languages */
 case class Concat[T](left: Regex[T], right: Regex[T]) extends Regex[T] {
   def toNFA = left.toNFA.+(right.toNFA)
 }
 
-
+/** Either[] suports the flexibility of allowing letters not of type Char */
 class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
+  
+  /** inout stream */
   var stream = s
+  
+  /** current location in the stream */ 
   var next = n
   var end = e
+  
+  /** most advanced location at which the parser had failed */
   var failed = f
 
   def max(n: Int, m: Int) = if (n <= m) m else n
@@ -39,6 +52,7 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
     E(end).getOrElse("syntax error at " ++ failed.toString())
   }
 
+  /** first set of rules in the context-free grammar */
   def E(last: Int): Option[Regex[T]] = {
     if (last < next || last >= stream.size) None
     else {
@@ -48,12 +62,15 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
     if (t == None) {
       failed = max(next, failed)
       next = save
+      
+      /** names of this, and the subsequent, 'parse' methods represnet the syntactic form being checked for in the context-free grammar */
       parseT_OR_E(failed, last)
     }
     else t
   }
   }
   
+  /** second set of rules */
   def T(last: Int): Option[Regex[T]] = {
 
     if (last < next || last >= stream.size) None
@@ -155,6 +172,7 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
     }
   }
 
+/** methods return None when the input stream does not have the syntactic form being checked for */ 
   def LETTER(last: Int) = {
     next = next + 1
     if (next > last || last >= stream.size) None
