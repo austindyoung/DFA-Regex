@@ -1,37 +1,44 @@
-package com.austinyoung.dfaregex
+abstract class Regex[T]
 
-import scala.collection._
-import scala.collection.immutable
+case class Word[T](content: Seq[T]) extends Regex[T]
 
-abstract class Regex[T] {
-  def toNFA: NFA[T]
-  def toDFA: DFA[T] = toNFA.DFA
-}
+case class Star[T](content: Regex[T]) extends Regex[T]
 
-case class Word[T](content: Seq[T]) extends Regex[T] {
-  val addLeft = (letter: T, stateList: List[NFAState[T]]) =>
-    new TransitionMapNFAState[T](Map(NonEmpty(letter) -> List(stateList.head)), false) :: stateList;
-  def toNFA = {
-    val states = content.foldRight(List[NFAState[T]](new TransitionMapNFAState[T](Map(), true)))(addLeft)
-    new NFA[T](states.head, states, content.toSet.map((letter: T) => (NonEmpty(letter))))
-  }
-}
-case class Star[T](content: Regex[T]) extends Regex[T] {
-  def toNFA = content.toNFA.*
-}
-case class Union[T](left: Regex[T], right: Regex[T]) extends Regex[T] {
-  def toNFA = left.toNFA.union(right.toNFA)
-}
-case class Concat[T](left: Regex[T], right: Regex[T]) extends Regex[T] {
-  def toNFA = left.toNFA.+(right.toNFA)
-}
+case class Union[T](left: Regex[T], right: Regex[T]) extends Regex[T]
 
+case class Concat[T](left: Regex[T], right: Regex[T]) extends Regex[T]
 
-class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
+abstract class Token[+T]
+
+case class Epsilon extends Token[+T]
+
+case class Letter[+T](letter: +T) extends Token[+T]
+
+case class Operator(op: Char) extends Token
+
+class Parser[+T](s: Seq[Token[+T]], n: Int,  e: Int, f: Int) {
   var stream = s
   var next = n
   var end = e
   var failed = f
+
+  def CFGBuilder(last: Int, save: Int, rules: List[(Int => Option[Regex[T]])]): Option[Regex[T]] = {
+    rules match {
+      case List(f) => f(last)
+      case _   => {
+        val result = rules.head(last)
+        if (result == None) {
+        failed = max(next, failed)
+        next = save
+        CFGBuilder(last, save, rules.tail)
+      }
+      else result
+    }
+  }
+  }
+
+  val Es: List[(Int => Option[Regex[T]])] = List(T, parseT_OR_E)
+  val Ts: List[(Int => Option[Regex[T]])] = List(LETTER, parseLETTER_STAR, parseLETTER_T, parseLETTER_STAR_T, parseOPEN_E_CLOSE, parseOPEN_E_CLOSE_STAR, parseOPEN_E_CLOSE_T, parseOPEN_E_CLOSE_STAR_T)
 
   def max(n: Int, m: Int) = if (n <= m) m else n
 
@@ -40,115 +47,57 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
   }
 
   def E(last: Int): Option[Regex[T]] = {
+
     if (last < next || last >= stream.size) None
     else {
-    val save = next
-
-    val t = T(last)
-    if (t == None) {
-      failed = max(next, failed)
-      next = save
-      parseT_OR_E(failed, last)
+      val save = next
+      CFGBuilder(last, save, Es)
     }
-    else t
   }
-  }
-  
+
   def T(last: Int): Option[Regex[T]] = {
-
     if (last < next || last >= stream.size) None
     else {
-    val save = next
-
-    val letter = LETTER(last)
-      if (letter == None) {
-        failed = max(next, failed)
-        next = save
-        val letter_star = parseLETTER_STAR(last)
-        if (letter_star == None) {
-          failed = max(next, failed)
-          next = save
-          val letter_t = parseLETTER_T(last)
-          if (letter_t == None) {
-            failed = max(next, failed)
-            next = save
-            val letter_star_t = parseLETTER_STAR_T(last)
-            if (letter_star_t == None) {
-              failed = max(next, failed)
-              next = save
-              val open_e_close = parseOPEN_E_CLOSE(last)
-              if (open_e_close == None) {
-                failed =  max(next, failed)
-                next = save
-                val open_e_close_star = parseOPEN_E_CLOSE_STAR(last)
-                if (open_e_close_star == None) {
-                  failed = max(next, failed)
-                  next = save
-                  val open_e_close_t_0 = parseOPEN_E_CLOSE_T(failed - 1, last)
-                  if (open_e_close_t_0 == None) {
-                    failed = max(next, failed)
-                    next = save
-                    val open_e_close_t_1 = parseOPEN_E_CLOSE_T(failed, last)
-                    if (open_e_close_t_1 == None) {
-                      failed = max(next, failed)
-                      next = save
-                      val open_e_close_t_2 = parseOPEN_E_CLOSE_T(failed + 1, last)
-                      if (open_e_close_t_2 == None) {
-                        failed = max(next, failed)
-                        next = save
-                        parseOPEN_E_CLOSE_STAR_T(failed, last)
-                      }
-                      else open_e_close_t_2
-                    }
-                    else open_e_close_t_1
-                  }
-                  else open_e_close_t_0
-                }
-                else open_e_close_star
-              }
-              else open_e_close
-            }
-            else letter_star_t
-          }
-          else letter_t
-        }
-        else letter_star
-      }
-      else letter
+      val save = next
+      CFGBuilder(last, save, Ts)
     }
   }
-
-  def opToken(op: Char) = {
+   
+  def opToken(op: Char, place: Int) = {
     next = next + 1
     if (next > end || end >= stream.size) false
     else {
-    stream(next) match {
-      case Left(x) => false
-      case Right(char) => char == op
+      if (next == place) {
+        stream(next) match {
+          case Operator(token) => {
+            if (token == op) true
+            else false
+          }
+          case _ => false
+        }
       }
-    }
+      else false
     }
   }
 
-  def OR = opToken('|')
+  def OR = opToken('|', )
 
   def OPEN = opToken('(')
-  
+
   def CLOSE = opToken(')')
 
   def STAR(last: Int) = {
     next = next + 1
     if (next > last || last >= stream.size) false
     else {
-
     if (next == last) {
       val eitherToken = stream(next)
         eitherToken match {
-        case Left(x) => false
-        case Right(x) => {
-          if (x == '*') true
-          else false
-        }
+          case Operator(token) => {
+            if (x == '*') true
+            else false
+          }
+          case _ => false
         }
     }
     else false
@@ -161,7 +110,7 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
     else {
     if (next == last) {
       stream(next) match {
-        case Left(x) => Some(new Word(List(x)))
+        case Letter(letter) => Some(new Word(List(letter)))
         case Right(x) => None
       }
     }
@@ -171,7 +120,6 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
 
 /** LETTER* */
   def parseLETTER_STAR(last: Int) = {
-
     val letter = LETTER(last - 1)
     if (letter != None) {
       if (STAR(last)) Some(new Star(letter.get))
@@ -182,7 +130,6 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
 
 /** LETTER T */
   def parseLETTER_T(last: Int) = {
-
     val left = LETTER(next + 1)
     if (left != None) {
       val right = T(last)
@@ -194,12 +141,11 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
 
 /** LETTER* T */
   def parseLETTER_STAR_T(last: Int) = {
-
     val letter = LETTER(next + 1)
     if (letter != None) {
       if (STAR(next + 1)) {
         val t = T(last)
-        if (t != None)Some(new Concat[T](new Star[T](letter.get), t.get))
+        if (t != None) Some(new Concat[T](new Star[T](letter.get), t.get))
         else None
       }
       else None
@@ -211,7 +157,6 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
 
 /** T | E */
    def parseT_OR_E(last: Int) = {
-
     val left = T(failed - 1)
     if (left != None) {
       if (OR) {
@@ -226,21 +171,19 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
 
 /** (E) */
   def parseOPEN_E_CLOSE(last: Int) = {
-
     if (OPEN) {
       val inside = E(last - 1)
       if (inside != None) {
         if (CLOSE) inside
         else None
       }
-    else  None
+      else None
     }
     else None
   }
 
 /** (E)* */
   def parseOPEN_E_CLOSE_STAR(last: Int) = {
-   
     if (OPEN) {
       val inside = E(last - 2)
       if (inside != None) {
@@ -253,15 +196,14 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
       else None
     }
     else None
-}
+  }
 
 /** (E) T */
   def parseOPEN_E_CLOSE_T(last: Int) = {
-    
     val left = parseOPEN_E_CLOSE(failed)
     if (left != None) {
-      val t = T(last)
-      if (t != None) Some(new Concat[T](left.get, t.get))
+      val right = T(last)
+      if (right != None) Some(new Concat[T](left.get, right.get))
       else None
     }
     else None
@@ -270,15 +212,14 @@ class Parser[T](s: Seq[Either[T,Char]], n: Int,  e: Int, f: Int) {
   
 /** (E)* T */
   def parseOPEN_E_CLOSE_STAR_T(last: Int) = {
-    
     val left = parseOPEN_E_CLOSE(failed - 1)
     if (left != None) {
-      if (STAR(fail)) {
+      if (STAR(failed)) {
         val t = T(last)
         if (t != None) Some(new Concat[T](new Star[T](left.get), t.get))
-        else  None
+        else None
       }
-      else  None
+      else None
     }
     else None
   }
@@ -292,26 +233,5 @@ class ParseChar {
   def parseChar(exp: String) = {
     def mapper(token: Char): Either[Char, Char] = if (token != '(' && token != ')' && token != '*' && token != '|') Left(token) else Right(token)
     new Parse[Char].parse(exp.toSeq.map(mapper))
-  }
-}
-
-object REPLDFA {
-  def justChar(character: Char) = {
-    lazy val start = new TransitionMapNFAState[Char](
-      Map(NonEmpty(character) -> List(accept)),
-      false)
-    lazy val accept = new TransitionMapNFAState[Char](Map(), true)
-    new NFA(start, List(start, accept), List(Epsilon, NonEmpty(character)))
-  }
-
-  def main(args: Array[String]) {
-    val cabd = (justChar('c') + (justChar('a') + justChar('b')).* + justChar('d')).*
-    println("Evaluating an NFA that recognizes the language (c(ab)*d)*")
-    var ok = true
-    while (ok) {
-      val input = readLine()
-      ok = input != null
-      if (ok) println(cabd.evaluate(input))
-    }
   }
 }

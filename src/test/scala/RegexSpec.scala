@@ -57,4 +57,24 @@ class RegexSpec extends FunSpec {
      assert(evenZerosRegex.left == new Star(new Word(List(1))))
    }
   }
+  describe("parsing") {
+    it("valid") {
+      new Parse.parse("1") == new Word[Char](List('1')))
+      assert(new Parse.parse("111") == new Concat[Char](new Word[Char](List('1'), new Concat[Char](new Word[Char](List('1'))))))
+      assert(new Parse.parse("1|11"))
+      assert(new Parse.parse("1|1|1"))
+      assert(new Parse.parse("11|11|11"))
+      assert(new Parse.parse("1*"))
+      assert(new Parse.parse("1*1*"))
+      assert(new Parse.parse("(1)"))
+      assert(new Parse.parse("((1))"))
+      assert(new Parse.parse("1(1)"))
+      assert(new Parse.parse("1(1)1"))
+      assert(new Parse.parse("1(1)(1)"))
+      assert(new Parse.parse("(1)(1)"))
+      assert(new Parse.parse("(11)(11)"))
+      assert(new Parse.parse("(1(1))"))
+      assert(new Parse.parse("((1)1)"))
+      assert(new Parse.parse("((1)(1))"))
+
 }
