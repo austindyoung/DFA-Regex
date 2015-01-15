@@ -10,7 +10,7 @@ case class Concat[T](left: Regex[T], right: Regex[T]) extends Regex[T]
 
 abstract class Token[T]
 
-case class Epsilon extends Token[T]
+case class Epsilon() extends Token
 
 case class Letter[T](letter: T) extends Token[T]
 
