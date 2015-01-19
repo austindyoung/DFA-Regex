@@ -44,7 +44,8 @@ class RegexSpec extends FunSpec {
      assert(concatInt.left == leftIntWord)
      assert(concatInt.right == rightIntWord)
     }
-   it("supports conversion to DFA") {
+
+    it("supports conversion to DFA") {
      val evenZerosRegex = new Concat[Int](new Star(new Word(List(1))), new Concat(new Star(new Concat(new Word(List(0)), new Concat(new Star(new Word(List(1))), new Word(List(0))))), new Star(new Word(List(1)))))
 
      val evenZerosDFAFromRegex = evenZerosRegex.toDFA
@@ -55,6 +56,6 @@ class RegexSpec extends FunSpec {
      assert(!evenZerosDFAFromRegex.evaluate(List(1, 0, 1)))
 
      assert(evenZerosRegex.left == new Star(new Word(List(1))))
-   }
+    }
   }
 }
