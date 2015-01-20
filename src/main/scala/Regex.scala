@@ -8,7 +8,14 @@ abstract class Regex[T] {
   def toDFA: DFA[T] = toNFA.DFA
 }
 
-/** object representing a string in an arbitrary langugae */
+case class Atom[T](content: T) extends Regex[T] {
+  def toNFA = {
+    val acceptState = new TransitionMapNFAState[T](Map(), true)
+    val startState = new TransitionMapNFAState[T](Map(NonEmpty(content) -> List(acceptState)), false)
+    new NFA[T](startState, List(acceptState, startState), Set(NonEmpty(content)))
+  }
+}
+
 case class Word[T](content: Seq[T]) extends Regex[T] {
   val addLeft = (letter: T, stateList: List[NFAState[T]]) =>
     new TransitionMapNFAState[T](Map(NonEmpty(letter) -> List(stateList.head)), false) :: stateList;
@@ -18,17 +25,14 @@ case class Word[T](content: Seq[T]) extends Regex[T] {
   }
 }
 
-//** represents the kleene star of a language */
 case class Star[T](content: Regex[T]) extends Regex[T] {
   def toNFA = content.toNFA.*
 }
 
-/** represents disjunction/union of two languages */
 case class Union[T](left: Regex[T], right: Regex[T]) extends Regex[T] {
   def toNFA = left.toNFA.union(right.toNFA)
 }
 
-/** represents concatenation of two languages */
 case class Concat[T](left: Regex[T], right: Regex[T]) extends Regex[T] {
   def toNFA = left.toNFA.+(right.toNFA)
 }
