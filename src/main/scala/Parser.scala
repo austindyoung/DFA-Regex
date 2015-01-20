@@ -16,33 +16,139 @@ case object Dot extends Token[Nothing]
  exp ::= <term><bin>
  bin ::= <bop><term>
  bin ::= <bop><term><bin>
+ bin ::= ε
+ bop ::= |
+ bop ::= ·
+ bomp ::= ε
  term ::= <alph>
  term ::= (<exp>)
  term ::= <term><unary>
  unary ::= * | "~"
- bop ::= |
- bop ::= ·
  */
 
-class Parser[T](incoming: Seq[Token[T]]) {
-  val regex = incoming
 
-  def parseParenthesized() = {
+case class ParseResult[T](regex: Regex[T], remaining: Seq[Token[T]])
 
-  }
+object RegexParser {
 
-  def parseExp() = {
-    parseTerm()
-  }
+
+  val tokenToBinaryOperator = Map[Token[Nothing], Object](
+    Bar -> Union,
+    Dot -> Concat
+  )
+
+  val operatorPrecedenceTiers = List[List[Token[Nothing]]](
+    List(Dot),
+    List(Bar)
+  )
+
+  val operatorToPrecedence = operatorPrecedenceTiers.zipWithIndex.flatMap(
+    {
+      case (operators, precedence) => {
+        operators.map(operator => operator -> precedence)
+      }
+    }
+  ).toMap
 }
 
-object PreParser {
-  def addDots(tokens: Seq[Token[T]]) {
-    var result = new mutable.MutableList[Token[Char]]()
-    var 
-  }
-}
+class RegexParser[T](s: Seq[Token[T]]) {
 
+  val regexSeq = s
+  var remainingSeq = s
+  val expressionStack = new mutable.Stack[Regex[T]]()
+  val operationStack = new mutable.Stack[Token[Nothing]]()
+
+  def parseExp: ParseResult[T] = {
+    expressionStack.push(parseTerm)
+    var continue = true
+    while(!remainingSeq.isEmpty && continue) {
+      val operator = remainingSeq(0) match {
+        case Dot => {
+          step
+          Some(Dot)
+        }
+        case t: AlphabetMember[T] => {
+          Some(Dot)
+        }
+        case LeftParen => {
+          Some(Dot)
+        }
+        case Bar => {
+          step
+          Some(Bar)
+        }
+        case RightParen => {
+          None
+        }
+        case _ => throw new Exception("Unrecognized next token")
+      }
+
+      operator match {
+        case Some(operator) => parseTermAndApplyOperator(operator)
+        case None => continue = false
+      }
+    }
+    ParseResult(finalizeResult, remainingSeq)
+  }
+
+  def parseTerm: Regex[T] = {
+    var term = remainingSeq(0) match {
+      case LeftParen => {
+        step
+        val result = new RegexParser(remainingSeq).parseExp
+        result.remaining(0) match {
+          case RightParen => remainingSeq = result.remaining
+          case _ => throw new Exception("Closing parenthesis not found")
+        }
+        result.regex
+      }
+      case am: AlphabetMember[T] => {
+        step
+        Atom(am.value)
+      }
+    }
+    var done = false
+    while(!done) {
+      remainingSeq(0) match {
+        case Asterisk => {
+          step
+          term = Star(term)
+        }
+        case _ => done = true
+      }
+    }
+    term
+  }
+
+  def finalizeResult = {
+    while(!operationStack.isEmpty) reduceStacks();
+    assert(operationStack.length == 1)
+    expressionStack.pop
+  }
+
+  def parseTermAndApplyOperator(operator: Token[Nothing]) = {
+    while(!operationStack.isEmpty &&
+            RegexParser.operatorToPrecedence(operator) <=
+            RegexParser.operatorToPrecedence(operationStack.head)) reduceStacks();
+    operationStack.push(operator)
+  }
+
+  def reduceStacks() = {
+    val right = expressionStack.pop
+    val left = expressionStack.pop
+    expressionStack.push(
+      operationStack.pop match {
+        case Bar => Union(left, right)
+        case Dot => Concat(left, right)
+      }
+    )
+  }
+
+  def step = {
+    remainingSeq = remainingSeq.drop(1)
+  }
+
+}
 
 object RegexStringParser {
   def parse(regexString: String) = {
