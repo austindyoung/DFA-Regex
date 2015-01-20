@@ -11,7 +11,7 @@ class Parser[T](s: Seq[Either[T, Char]]) {
   
   /** current location in the stream */ 
   var next = -1
-  var end = 0
+  var end = stream.size - 1
   
   /** most advanced location at which the parser had failed */
   var failed = 0
@@ -27,7 +27,6 @@ class Parser[T](s: Seq[Either[T, Char]]) {
     if (last < next || last >= stream.size) None
     else {
       val save = next
-
       val t = T(last)
       if (t == None) {
         failed = max(next, failed)
@@ -70,19 +69,19 @@ class Parser[T](s: Seq[Either[T, Char]]) {
                 if (open_e_close_star == None) {
                   failed = max(next, failed)
                   next = save
-                  val open_e_close_t_0 = parseOPEN_E_CLOSE_T(failed - 1)
+                  val open_e_close_t_0 = parseOPEN_E_CLOSE_T(failed - 1, last)
                   if (open_e_close_t_0 == None) {
                     failed = max(next, failed)
                     next = save
-                    val open_e_close_t_1 = parseOPEN_E_CLOSE_T(failed)
+                    val open_e_close_t_1 = parseOPEN_E_CLOSE_T(failed, last)
                     if (open_e_close_t_1 == None) {
                       failed = max(next, failed)
                       next = save
-                      val open_e_close_t_2 = parseOPEN_E_CLOSE_T(failed + 1)
+                      val open_e_close_t_2 = parseOPEN_E_CLOSE_T(failed + 1, last)
                       if (open_e_close_t_2 == None) {
                         failed = max(next, failed)
                         next = save
-                        parseOPEN_E_CLOSE_STAR_T(failed)
+                        parseOPEN_E_CLOSE_STAR_T(last)
                       }
                       else open_e_close_t_2
                     }
