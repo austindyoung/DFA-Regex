@@ -1,5 +1,4 @@
 package com.austinyoung.dfaregex
-
 import scala.collection._
 import scala.collection.immutable
 
@@ -14,12 +13,11 @@ case object Dot extends Token[Nothing]
 
 /* The grammar used in this parser is roughly as follows
  exp ::= <term><bin>
- bin ::= <bop><term>
  bin ::= <bop><term><bin>
  bin ::= ε
  bop ::= |
  bop ::= ·
- bomp ::= ε
+ bop ::= ε
  term ::= <alph>
  term ::= (<exp>)
  term ::= <term><unary>
@@ -37,7 +35,7 @@ object RegexParser {
     Dot -> Concat
   )
 
-  val operatorPrecedenceTiers = List[List[Token[Nothing]]](
+  val operatorPrecedenceTiers = List[Iterable[Token[Nothing]]](
     List(Dot),
     List(Bar)
   )
@@ -108,7 +106,7 @@ class RegexParser[T](s: Seq[Token[T]]) {
       }
     }
     var done = false
-    while(!done) {
+    while(!done && !remainingSeq.isEmpty) {
       remainingSeq(0) match {
         case Asterisk => {
           step
@@ -122,14 +120,16 @@ class RegexParser[T](s: Seq[Token[T]]) {
 
   def finalizeResult = {
     while(!operationStack.isEmpty) reduceStacks();
-    assert(operationStack.length == 1)
+    println(expressionStack.head)
+    assert(expressionStack.length == 1)
     expressionStack.pop
   }
 
   def parseTermAndApplyOperator(operator: Token[Nothing]) = {
     while(!operationStack.isEmpty &&
-            RegexParser.operatorToPrecedence(operator) <=
+            RegexParser.operatorToPrecedence(operator) >=
             RegexParser.operatorToPrecedence(operationStack.head)) reduceStacks();
+    expressionStack.push(parseTerm)
     operationStack.push(operator)
   }
 
@@ -147,25 +147,26 @@ class RegexParser[T](s: Seq[Token[T]]) {
   def step = {
     remainingSeq = remainingSeq.drop(1)
   }
-
 }
 
 object RegexStringParser {
   def parse(regexString: String) = {
     var escape = false
-    var result = new mutable.MutableList[Token[Char]]()
+    var tokenSequence = new mutable.MutableList[Token[Char]]()
     for(char <- regexString) {
       if(escape) {
-        result += AlphabetMember(char)
+        tokenSequence += AlphabetMember(char)
         escape = false
       } else {
         tokenForCharacter(char) match {
-          case Some(token) => { result += token }
+          case Some(token) => { tokenSequence += token }
           case None => { escape = true }
         }
       }
     }
-    result
+    val parseResult = new RegexParser(tokenSequence).parseExp
+    assert(parseResult.remaining.isEmpty)
+    parseResult.regex
   }
 
   def tokenForCharacter(char: Char):Option[Token[Char]] = {
