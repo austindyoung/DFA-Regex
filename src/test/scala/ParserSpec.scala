@@ -51,23 +51,11 @@ class ParserSpec extends FunSpec {
       assert(RegexStringParser.parse(testRegexString) == expectedRegex)
     }
 
-    // it("can handle escapes of )") {
-    //   val testRegexString = "(\\)andsomestuff)"
-    //   val expectedRegex = Word(")andsomestuff")
-    //   assert(RegexStringParser.parse(testRegexString) == expectedRegex)
-    // }
-
-    // it("can handle escapes of (") {
-    //   val testRegexString = "(\\(andsomestuff)"
-    //   val expectedRegex = Word("(andsomestuff")
-    //   assert(RegexStringParser.parse(testRegexString) == expectedRegex)
-    // }
-
-    // it("can handle nested escapes of reserved characters") {
-    //   val testRegexString = "stuff\\**|other"
-    //   val expectedRegex = Union(Star(Word("stuff*")), Word("other"))
-    //   assert(RegexStringParser.parse(testRegexString) == expectedRegex)
-    // }
+    it("can handle nested escapes of reserved characters") {
+      val testRegexString = "f\\**|ot"
+      val expectedRegex = Union(Concat(Atom('f'), Star(Atom('*'))), Concat(Atom('o'), Atom('t')))
+      assert(RegexStringParser.parse(testRegexString) == expectedRegex)
+    }
 
     it("parses parentheses") {
       val testRegexString = "(ad)(c)(f)"
@@ -81,11 +69,11 @@ class ParserSpec extends FunSpec {
       assert(RegexStringParser.parse(testRegexString) == expectedRegex)
     }
 
-    // it("parses 1(1)* correctly") {
-    //   val testRegexString = "1(1)*"
-    //   val expectedRegex = Concat(Word("1"), Star(Word("1")))
-    //   assert(RegexStringParser.parse(testRegexString) == expectedRegex)
-    // }
+    it("parses (1)*1 correctly") {
+      val testRegexString = "(1)*1"
+      val expectedRegex = Concat(Star(Atom('1')), Atom('1'))
+      assert(RegexStringParser.parse(testRegexString) == expectedRegex)
+    }
 
     it("parses a complicated expression") {
       val testRegexString = "(a*)|((k*i)|(ob))*|j*h"
