@@ -84,6 +84,8 @@ class ParserSpec extends FunSpec {
       assert(RegexStringParser.parse(testRegexString).toDFA.evaluate("kkkkiobkiiiiobki"))
       assert(!RegexStringParser.parse(testRegexString).toDFA.evaluate("kkkkiobkiiiiobkik"))
       assert(!RegexStringParser.parse(testRegexString).toDFA.evaluate("kkkkiobkiiiiobkikok"))
+      assert(RegexStringParser.parse(testRegexString).toDFA.evaluate("jjjjjjjjjh"))
+      assert(RegexStringParser.parse(testRegexString).toDFA.evaluate("aaaaa"))
     }
 
     it("makes regexes that can be converted to DFAs and then matched against strings") {
