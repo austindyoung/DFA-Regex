@@ -117,7 +117,6 @@ class RegexParser[T](s: Seq[Token[T]]) {
 
   def finalizeResult = {
     while(!operationStack.isEmpty) reduceStacks();
-    println(expressionStack.head)
     assert(expressionStack.length == 1)
     expressionStack.pop
   }
