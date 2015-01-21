@@ -40,3 +40,5 @@ case class Union[T](left: Regex[T], right: Regex[T]) extends BinaryRegex[T](left
 case class Concat[T](left: Regex[T], right: Regex[T]) extends BinaryRegex[T](left, right) {
   def toNFA = left.toNFA.+(right.toNFA)
 }
+
+case object Empty extends Regex[Nothing]
