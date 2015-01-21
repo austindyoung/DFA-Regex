@@ -24,7 +24,6 @@ case object Dot extends Token[Nothing]
  unary ::= * | "~"
  */
 
-
 case class ParseResult[T](regex: Regex[T], remaining: Seq[Token[T]])
 
 object RegexParser {
@@ -95,7 +94,7 @@ class RegexParser[T](s: Seq[Token[T]]) {
         step
         val result = new RegexParser(remainingSeq).parseExp
         result.remaining(0) match {
-          case RightParen => remainingSeq = result.remaining
+          case RightParen => remainingSeq = result.remaining.tail
           case _ => throw new Exception("Closing parenthesis not found")
         }
         result.regex
