@@ -80,6 +80,25 @@ class ParserSpec extends FunSpec {
       val middle = Star(Union(Concat(Star(Atom('k')), Atom('i')), makeWord("ob")))
       val expectedRegex = Union(Union(Star(Atom('a')), middle), Concat(Star(Atom('j')), Atom('h')))
       assert(RegexStringParser.parse(testRegexString) == expectedRegex)
+      assert(RegexStringParser.parse(testRegexString).toDFA.evaluate("kkkkiobkiiob"))
+      assert(RegexStringParser.parse(testRegexString).toDFA.evaluate("kkkkiobkiiiiobki"))
+      assert(!RegexStringParser.parse(testRegexString).toDFA.evaluate("kkkkiobkiiiiobkik"))
+    }
+
+    it("makes regexes that can be converted to DFAs and then matched against strings") {
+      var DFA = RegexStringParser.parse("(ab)*").toDFA
+      assert(DFA.evaluate("ababab"))
+      assert(!DFA.evaluate("abababb"))
+      assert(DFA.evaluate(""))
+
+      DFA = RegexStringParser.parse("(ab)*c").toDFA
+      assert(DFA.evaluate("c"))
+      assert(DFA.evaluate("abc"))
+      assert(DFA.evaluate("ababc"))
+
+      DFA = RegexStringParser.parse("(ab)*c|other").toDFA
+      assert(DFA.evaluate("ababc"))
+      assert(DFA.evaluate("other"))
     }
   }
 }

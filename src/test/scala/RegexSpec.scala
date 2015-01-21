@@ -64,5 +64,9 @@ class RegexSpec extends FunSpec {
 
       assert(evenZerosRegex.left == new Star(new Word(List(1))))
     }
+
+    it("converts unions to DFA properly") {
+      Union(Atom('a'), Atom('b')).toDFA
+    }
   }
 }
