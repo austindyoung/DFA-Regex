@@ -117,16 +117,20 @@ class DFACombiner[AlphabetType](
   val sinkState = new LoopDFAState[AlphabetType](false, combinedAlphabets)
 
   def combine(): DFA[AlphabetType] = {
-    // TODO(@IvanMalison) It might be better to this by Queue/BFSing it up
-    // This approach could lead to the generation of a huge number of states that
-    // can never be reached. Think about the case of generating the union of a DFA
-    // with itself 10 times.
-    val cartesianProduct = dfas.foldLeft(
-      new immutable.HashSet[List[State]]() ++ List(Nil))((soFar, dfa) =>
-      soFar.flatMap(states => dfa.states.map(state => state :: states)))
+    val states = mutable.HashSet[DestState]()
+    val queue = mutable.Queue[DestState]()
+    val startState = getState(dfas.map(dfa => dfa.startState))
+    queue.enqueue(startState)
+    while(!queue.isEmpty) {
+      val current = queue.dequeue()
+      states.add(current)
+      current.transitionMap.values.foreach(state => {
+        if (!states(state)) queue.enqueue(state)
+      })
+    }
     new DFA[AlphabetType](
-      getState(dfas.map(dfa => dfa.startState)),
-      cartesianProduct.map(stateList => getState(stateList)),
+      startState,
+      states + sinkState,
       Some(combinedAlphabets))
   }
 
@@ -144,5 +148,3 @@ class DFACombiner[AlphabetType](
     )
   }
 }
-
-

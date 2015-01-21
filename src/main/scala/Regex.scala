@@ -31,10 +31,6 @@ case class Star[T](content: Regex[T]) extends UnaryRegex[T](content) {
   def toNFA = content.toNFA.*
 }
 
-case class Star2[T](content: Regex[T]) extends UnaryRegex[T](content) {
-  def toNFA = content.toNFA.*
-}
-
 abstract class BinaryRegex[T](left: Regex[T], right: Regex[T]) extends Regex[T]
 
 case class Union[T](left: Regex[T], right: Regex[T]) extends BinaryRegex[T](left, right) {
