@@ -10,7 +10,6 @@ case object Asterisk extends Token[Nothing]
 case object Bar extends Token[Nothing]
 case object Dot extends Token[Nothing]
 
-
 /* The grammar used in this parser is roughly as follows
  exp ::= <term><bin>
  bin ::= <bop><term><bin>
@@ -21,13 +20,12 @@ case object Dot extends Token[Nothing]
  term ::= <alph>
  term ::= (<exp>)
  term ::= <term><unary>
- unary ::= * | "~"
+ unary ::= *
  */
 
 case class ParseResult[T](regex: Regex[T], remaining: Seq[Token[T]])
 
 object RegexParser {
-
 
   val tokenToBinaryOperator = Map[Token[Nothing], Object](
     Bar -> Union,
