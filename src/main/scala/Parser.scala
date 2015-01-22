@@ -32,7 +32,7 @@ class Parser[T](s: Seq[Either[T, Char]]) {
         failed = max(next, failed)
         next = save
         /** names of this, and the subsequent, 'parse' methods represnet the syntactic form being checked for in the context-free grammar */
-        parseT_OR_E(failed)
+        parseT_OR_E(last)
       }
       else t
     }
@@ -120,23 +120,7 @@ class Parser[T](s: Seq[Either[T, Char]]) {
   
   def CLOSE = opToken(')')
 
-  def STAR(last: Int) = {
-    next = next + 1
-    if (next > last || last >= stream.size) false
-    else {
-      if (next == last) {
-        val eitherToken = stream(next)
-        eitherToken match {
-          case Left(x) => false
-          case Right(x) => {
-            if (x == '*') true
-            else false
-          }
-        }
-      }
-      else false
-    }
-  }
+  def STAR = opToken('*')
 
 /** methods return None when the input stream does not have the syntactic form being checked for */ 
   def LETTER(last: Int) = {
@@ -158,7 +142,7 @@ class Parser[T](s: Seq[Either[T, Char]]) {
 
     val letter = LETTER(last - 1)
     if (letter != None) {
-      if (STAR(last)) Some(new Star(letter.get))
+      if (STAR) Some(new Star(letter.get))
       else None
     }
     else None
@@ -181,7 +165,7 @@ class Parser[T](s: Seq[Either[T, Char]]) {
 
     val letter = LETTER(next + 1)
     if (letter != None) {
-      if (STAR(next + 1)) {
+      if (STAR) {
         val t = T(last)
         if (t != None)Some(new Concat[T](new Star[T](letter.get), t.get))
         else None
@@ -229,7 +213,7 @@ class Parser[T](s: Seq[Either[T, Char]]) {
       val inside = E(last - 2)
       if (inside != None) {
         if (CLOSE) {
-          if (STAR(next + 1)) Some(new Star[T](inside.get))
+          if (STAR) Some(new Star[T](inside.get))
           else None
         }
         else None
@@ -240,9 +224,9 @@ class Parser[T](s: Seq[Either[T, Char]]) {
 }
 
 /** (E) T */
-  def parseOPEN_E_CLOSE_T(last: Int) = {
+  def parseOPEN_E_CLOSE_T(fail: Int, last: Int) = {
     
-    val left = parseOPEN_E_CLOSE(failed)
+    val left = parseOPEN_E_CLOSE(fail)
     if (left != None) {
       val t = T(last)
       if (t != None) Some(new Concat[T](left.get, t.get))
@@ -257,7 +241,7 @@ class Parser[T](s: Seq[Either[T, Char]]) {
     
     val left = parseOPEN_E_CLOSE(failed - 1)
     if (left != None) {
-      if (STAR(failed)) {
+      if (STAR) {
         val t = T(last)
         if (t != None) Some(new Concat[T](new Star[T](left.get), t.get))
         else  None
