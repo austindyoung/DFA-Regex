@@ -71,13 +71,14 @@ class StateEliminator[T](val nfa: NFA[T]) extends {
       }
     }
   )
-  assert(checkStateIntegrity(startState::endState::regexStates.toList) == Nil)
+
+  //assert(checkStateIntegrity(regexStates + startState + endState) == Nil)
 
   def regex = {
-    eliminateStates(regexStates.toList)
+    eliminateStates(regexStates)
   }
 
-  def checkStateIntegrity(allStates: List[RegexState[T]]) = {
+  def checkStateIntegrity(allStates: Set[RegexState[T]]) = {
     for {
       state <- allStates
       (regex, transitionStates) <- state.transitionMap
@@ -86,7 +87,7 @@ class StateEliminator[T](val nfa: NFA[T]) extends {
     } yield (state, regex, transitionState)
   }
 
-  def getEliminationTriples(allStates: List[RegexState[T]], stateToEliminate: RegexState[T]) = {
+  def getEliminationTriples(allStates: Set[RegexState[T]], stateToEliminate: RegexState[T]) = {
     for {
       sourceState <- allStates
       (leftRegex, transitionMapDestinations) <- sourceState.transitionMap
@@ -94,59 +95,59 @@ class StateEliminator[T](val nfa: NFA[T]) extends {
     } yield (sourceState, leftRegex, stateToEliminate)
   }
 
-  def eliminateStates(remainingStates: List[RegexState[T]]): Regex[T] = {
-    remainingStates match {
-      case stateToEliminate::otherStates => {
-        val allStates = startState::endState::otherStates
-        val beforeElimination = checkStateIntegrity(allStates)
-        assert(beforeElimination == getEliminationTriples(allStates, stateToEliminate))
-        val purportedEliminations = eliminateState(stateToEliminate, otherStates)
-        if(beforeElimination != purportedEliminations) {
-          println("Something wasn't taken care of...")
-          println(beforeElimination.toSet &~ purportedEliminations.toSet)
-          for ((state, regex, transitionState) <- (beforeElimination.toSet &~ purportedEliminations.toSet)) {
-            if(transitionState != stateToEliminate)
-              println("But it wasn't stateToEliminate")
-            else
-              println("And it was stateToEliminate")
-          }
-        }
-        val integrityCheck = checkStateIntegrity(allStates)
-        integrityCheck.map(
-          {
-            case (state, regex, transitionState) => {
-              if(!allStates.contains(transitionState)) {
-                println(f"violation before elmination is ${beforeElimination.contains((state, regex, transitionState))}")
-                println(f"${allStates.size} states left.")
-                println(f"here is the transition regex")
-                println(regex)
-                println(f"there were originally ${regexStates.size + 2} states.")
-                println(f"${startState.transitionMap.size} transitions in start state map")
-                if(transitionState == stateToEliminate)
-                  println("problem state was stateToEliminate")
-                else {
-                  println("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-                  println("problem state was another state")
-                }
-              }
-            }
-          }
-        )
-        if(!integrityCheck.isEmpty) { println("Thas all folks XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"); assert(false)}
-        eliminateStates(otherStates)
-      }
-      case Nil => {
-        startState.transitionMap.keys.reduce((left, right) => Union(left, right))
-      }
-    }
+  def pickStateToRemove(remainingStates: Set[RegexState[T]]): RegexState[T] = {
+    remainingStates.minBy(state => state.transitionMap.size)
   }
 
-  def eliminateState(stateToEliminate: RegexState[T], otherStates: List[RegexState[T]]) = {
+  def eliminateStates(remainingStates: Set[RegexState[T]]): Regex[T] = {
+    if(remainingStates.isEmpty) {
+      return startState.transitionMap.keys.reduce((left, right) => Union(left, right))
+    }
+    val stateToEliminate = pickStateToRemove(remainingStates)
+    val otherStates = remainingStates - stateToEliminate
+    val allStates = otherStates + startState + endState
+    val beforeElimination = checkStateIntegrity(allStates)
+    assert(beforeElimination == getEliminationTriples(allStates, stateToEliminate))
+    val purportedEliminations = eliminateState(stateToEliminate, otherStates)
+    if(beforeElimination != purportedEliminations) {
+      println("Something wasn't taken care of...")
+      println(beforeElimination.toSet &~ purportedEliminations.toSet)
+      for ((state, regex, transitionState) <- (beforeElimination.toSet &~ purportedEliminations.toSet)) {
+        if(transitionState != stateToEliminate)
+          println("But it wasn't stateToEliminate")
+        else
+          println("And it was stateToEliminate")
+      }
+    }
+    val integrityCheck = checkStateIntegrity(allStates)
+    integrityCheck.map(
+      {
+        case (state, regex, transitionState) => {
+          if(!allStates.contains(transitionState)) {
+            println(f"violation before elmination is ${beforeElimination.contains((state, regex, transitionState))}")
+            println(f"${allStates.size} states left.")
+            println(f"here is the transition regex")
+            println(regex)
+            println(f"there were originally ${regexStates.size + 2} states.")
+            println(f"${startState.transitionMap.size} transitions in start state map")
+            if(transitionState == stateToEliminate)
+              println("problem state was stateToEliminate")
+            else {
+              println("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+              println("problem state was another state")
+            }
+          }
+        }
+      }
+    )
+    if(!integrityCheck.isEmpty) { println("Thas all folks XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"); assert(false)}
+    eliminateStates(otherStates)
+  }
+
+  def eliminateState(stateToEliminate: RegexState[T], otherStates: Set[RegexState[T]]) = {
     val repetitionRegex = getRepetitionRegex(stateToEliminate)
-    val validDestinationStates = Set(otherStates: _*) + endState
-    println("eliminating")
-    println(otherStates.size)
-    getEliminationTriples(startState::otherStates, stateToEliminate).map(
+    val validDestinationStates = otherStates + endState
+    getEliminationTriples(otherStates + startState, stateToEliminate).map(
       {
         case (sourceState, leftRegex, stateToEliminate) => {
           // Get rid of the stateToEliminate in the map

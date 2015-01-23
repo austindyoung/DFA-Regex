@@ -24,6 +24,9 @@ case object Bar extends Token[Nothing] {
 case object Dot extends Token[Nothing] {
   override val toString = "·"
 }
+case object EmptyString extends Token[Nothing] {
+  override val toString = "ε"
+}
 
 /* The grammar used in this parser is roughly as follows
  exp ::= <term><bin>

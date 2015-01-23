@@ -69,5 +69,5 @@ case class Empty[T]() extends Regex[T] {
     val onlyState = new TransitionMapNFAState[T](Map(), true)
     new NFA[T](onlyState, List(onlyState), List())
   }
-  def toTokenSeq = Seq()
+  def toTokenSeq = Seq(EmptyString)
 }

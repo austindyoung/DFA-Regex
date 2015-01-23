@@ -36,9 +36,9 @@ class StateEliminatorSpec extends FunSpec {
     val regex = new StateEliminator(referenceNFA).regex
     println("actual:")
     println(regexString)
-    println("lol")
-    println(regex.toTokenSeq.map({(t: Token[Char]) => t.toString}).mkString)
-    println(regex)
+    println("after state elimination:")
+    val output = regex.toTokenSeq.map({(t: Token[Char]) => t.toString}).mkString
+    if(output.length < 5000) println(output) else println(output.length)
     val nfa = regex.toNFA
     inputs.foreach(
       input => {
@@ -88,16 +88,23 @@ class StateEliminatorSpec extends FunSpec {
     testStateEliminator("(111|a(ab*|k))*", List("111", "111111", "aabk", "aababababak", "111akkkk", "111akaab"))
   }
 
-  it("handles weird bug ((1|a|b|c|e)") {
-    testStateEliminator("1|a|b|c|d|e|k|s|i|f|r|i|p|#", List("1", "a", "aa", "b", "c", "f", "r", "i", "p"))
+  it("handles weird bug ((c|d|e|k|s|i|f|r|i|p|#|p|)") {
+    testStateEliminator("1|a|f|r|#|%k|%k|090*|0909090|b|c|d|e|k|s|i|f|r|i|p|#", List("1", "a", "aa", "b", "c", "f", "r", "i", "p", "09000"))
   }
 
   it("testing") {
     testStateEliminator("((k*i)|(ob))*", List())
   }
 
+  it("handles complicated stuff") {
+    testStateEliminator("(funyuns)*fd|ksmats|d|d|d|d|d", List("ksmats", "ksmatsd", "d", "funyunsfd"))
+    testStateEliminator("(ab)*|(ab)*|(ab)*|(ab)*", List("abababa", "ababab", "aabb"))
+    testStateEliminator("bats(-cats-bats-cats-bats)*", List())
+    testStateEliminator("bats(-cats-bats)*|bats-cats|a*", List())
+  }
+
   it("handles complicated stuff ((a*)|((k*i)|(ob))*|j*h") {
-    testStateEliminator("(a*)|((k*i)|(ob))*|j*h",
+    testStateEliminator("((ki*)|(jahoob))*",
                         List("kkkkiobkiiob", "kkkkiobkiiiiobki", "kkkkiobkiiiiobkik",
                              "kkkkiobkiiiiobkikok", "jjjjjjjjjh", "aaaaa"))
   }
