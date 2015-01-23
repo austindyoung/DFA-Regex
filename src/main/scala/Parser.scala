@@ -2,13 +2,28 @@ package com.austinyoung.dfaregex
 import scala.collection._
 import scala.collection.immutable
 
-abstract class Token[+T]
-case class AlphabetMember[+T](value: T) extends Token[T]
-case object LeftParen extends Token[Nothing]
-case object RightParen extends Token[Nothing]
-case object Asterisk extends Token[Nothing]
-case object Bar extends Token[Nothing]
-case object Dot extends Token[Nothing]
+abstract class Token[+T] {
+  def toString: String
+}
+case class AlphabetMember[+T](value: T) extends Token[T] {
+  override def toString = f"${value}"
+}
+case object LeftParen extends Token[Nothing] {
+  override val toString = "("
+}
+case object RightParen extends Token[Nothing] {
+  override val toString = ")"
+}
+
+case object Asterisk extends Token[Nothing] {
+  override val toString = "*"
+}
+case object Bar extends Token[Nothing] {
+  override val toString = "|"
+}
+case object Dot extends Token[Nothing] {
+  override val toString = "·"
+}
 
 /* The grammar used in this parser is roughly as follows
  exp ::= <term><bin>
