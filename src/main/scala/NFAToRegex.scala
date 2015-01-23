@@ -72,8 +72,6 @@ class StateEliminator[T](val nfa: NFA[T]) extends {
     }
   )
 
-  //assert(checkStateIntegrity(regexStates + startState + endState) == Nil)
-
   def regex = {
     eliminateStates(regexStates)
   }
@@ -105,42 +103,7 @@ class StateEliminator[T](val nfa: NFA[T]) extends {
     }
     val stateToEliminate = pickStateToRemove(remainingStates)
     val otherStates = remainingStates - stateToEliminate
-    val allStates = otherStates + startState + endState
-    val beforeElimination = checkStateIntegrity(allStates)
-    assert(beforeElimination == getEliminationTriples(allStates, stateToEliminate))
-    val purportedEliminations = eliminateState(stateToEliminate, otherStates)
-    if(beforeElimination != purportedEliminations) {
-      println("Something wasn't taken care of...")
-      println(beforeElimination.toSet &~ purportedEliminations.toSet)
-      for ((state, regex, transitionState) <- (beforeElimination.toSet &~ purportedEliminations.toSet)) {
-        if(transitionState != stateToEliminate)
-          println("But it wasn't stateToEliminate")
-        else
-          println("And it was stateToEliminate")
-      }
-    }
-    val integrityCheck = checkStateIntegrity(allStates)
-    integrityCheck.map(
-      {
-        case (state, regex, transitionState) => {
-          if(!allStates.contains(transitionState)) {
-            println(f"violation before elmination is ${beforeElimination.contains((state, regex, transitionState))}")
-            println(f"${allStates.size} states left.")
-            println(f"here is the transition regex")
-            println(regex)
-            println(f"there were originally ${regexStates.size + 2} states.")
-            println(f"${startState.transitionMap.size} transitions in start state map")
-            if(transitionState == stateToEliminate)
-              println("problem state was stateToEliminate")
-            else {
-              println("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-              println("problem state was another state")
-            }
-          }
-        }
-      }
-    )
-    if(!integrityCheck.isEmpty) { println("Thas all folks XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"); assert(false)}
+    eliminateState(stateToEliminate, otherStates)
     eliminateStates(otherStates)
   }
 
