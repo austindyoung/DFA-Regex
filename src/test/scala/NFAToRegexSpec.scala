@@ -67,8 +67,24 @@ class StateEliminatorSpec extends FunSpec {
     testStateEliminator("(ab)*", List("ab", "aba", "abab", "aabababa", "abababababab", "abab"))
   }
 
-  it("handles with union (((ac)*b)*)") {
+  it("handles nested stars (((ac)*b)*)") {
     testStateEliminator("((ac)*b)*", List("acb", "", "acacacb", "acacab", "accbac", "acacbacb", "bacb"))
+  }
+
+  it("handles unions with stars ((ab|c|(jk)*)") {
+    testStateEliminator("ab|c|(jk)*", List("ab", "c", "abc", "ajkjkjk", "jkjkjk", "jkjkjkj"))
+  }
+
+  it("handles stars of unions ((a|bb)*)") {
+    testStateEliminator("(a|bb)*", List("aababaababab", "aaaaa", "bbbb", "abbbbbbabb", "abba"))
+  }
+
+  it("handles stars of unions ((111|a(ab*|k))*)") {
+    testStateEliminator("(111|a(ab*|k))*", List("111", "111111", "aabk", "aababababak", "111akkkk", "111akaab"))
+  }
+
+  it("handles weird bug ((1|a(ab*|k))*)") {
+    testStateEliminator("(a(jab*|k))*", List())
   }
 
   it("handles complicated stuff ((a*)|((k*i)|(ob))*|j*h") {
