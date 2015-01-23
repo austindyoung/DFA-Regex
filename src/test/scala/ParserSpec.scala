@@ -4,6 +4,12 @@ import org.scalatest.FunSpec
 
 class ParserSpec extends FunSpec {
 
+  def dfaTest(regexString: String, trueInputs: List[String], falseInputs: List[String]) {
+    val nfa: NFA[Char] = RegexStringParser.parse(regexString).toNFA
+    trueInputs.foreach(input => assert(nfa.evaluate(input)))
+    falseInputs.foreach(input => assert(!nfa.evaluate(input)))
+  }
+
   def makeWord(string: String) = {
     val first = string.head
     val rest = string.tail
@@ -102,6 +108,12 @@ class ParserSpec extends FunSpec {
       DFA = RegexStringParser.parse("(ab)*c|other").toDFA
       assert(DFA.evaluate("ababc"))
       assert(DFA.evaluate("other"))
+    }
+
+    it("handles a rigourous DFA based test") {
+      dfaTest("a|b", List("a", "b"), List("aaa", "bbb", "aa", "bb"))
+      dfaTest("(a|bc)*d*lll", List("bclll", "lll", "abcabcbcbcdddlll", "dddlll"), List("abcabcbcddll", "aaaaadll", "aaa", "bbb", "aa", "bb"))
+      dfaTest("aaa|12*|klaj(aj)*", List("klajajajaj", "12", "aaa", "12222", "klaj"), List("aa12", "121"))
     }
   }
 }
