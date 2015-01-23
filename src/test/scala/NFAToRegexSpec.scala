@@ -35,10 +35,8 @@ class StateEliminatorSpec extends FunSpec {
     val referenceNFA: NFA[Char] = RegexStringParser.parse(regexString).toNFA
     val regex = new StateEliminator(referenceNFA).regex
     val nfa = regex.toNFA
-    println(regex)
     inputs.foreach(
       input => {
-        println(input)
         assert(referenceNFA.evaluate(input) == nfa.evaluate(input))
       }
     )
@@ -57,10 +55,8 @@ class StateEliminatorSpec extends FunSpec {
   }
 
   it("handles simple words (abcdefg)") {
-    println("for regex abcd")
     testStateEliminator("abcd", List("abc", "abcd"))
-    println("XXXXXXXX")
-    testStateEliminator("abcdefg", List("abcdefg", "abc", "aaa", "abcdefgi", "kabcdefg"))
+    testStateEliminator("abcdefg", List("abcdefg", "abc", "aaa", "abcdefg", "aabcdefg"))
   }
 
   it("handles a union (a|b)") {
@@ -74,4 +70,11 @@ class StateEliminatorSpec extends FunSpec {
   it("handles with union (((ac)*b)*)") {
     testStateEliminator("((ac)*b)*", List("acb", "", "acacacb", "acacab", "accbac", "acacbacb", "bacb"))
   }
+
+  it("handles complicated stuff ((a*)|((k*i)|(ob))*|j*h") {
+    testStateEliminator("(a*)|((k*i)|(ob))*|j*h",
+                        List("kkkkiobkiiob", "kkkkiobkiiiiobki", "kkkkiobkiiiiobkik",
+                             "kkkkiobkiiiiobkikok", "jjjjjjjjjh", "aaaaa"))
+  }
+
 }

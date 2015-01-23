@@ -83,11 +83,6 @@ class StateEliminator[T](val nfa: NFA[T]) extends {
       (_, transitionStates) <- state.transitionMap
       transitionState <- transitionStates
     } yield {
-      if(!allStates.contains(transitionState)) {
-        println("state contains a transitioin state taht it shouldn")
-        println(state.transitionMap)
-        println(transitionState)
-      }
       assert(allStates.contains(transitionState))
     }
   }
@@ -101,10 +96,7 @@ class StateEliminator[T](val nfa: NFA[T]) extends {
         eliminateStates(otherStates)
       }
       case Nil => {
-        println(f"size of start states transition map is ${startState.transitionMap.size}")
-        assert(startState.transitionMap.size == 1)
-        val (regex, dest) = startState.transitionMap.head
-        regex
+        startState.transitionMap.keys.reduce((left, right) => Union(left, right))
       }
     }
   }
@@ -123,9 +115,9 @@ class StateEliminator[T](val nfa: NFA[T]) extends {
           case (rightRegex, eliminatedDestinationStates) => {
             val regexKey = List(leftRegex, repetitionRegex, rightRegex).reduceLeft(
               binOpIgnoringEmpties((a, b) => Concat(a, b)) _)
-            println(f"new regex key is ${regexKey}")
+            val validDestinationStates = Set(otherStates: _*) + endState
             for(destinationState <- eliminatedDestinationStates
-                if otherStates.contains(destinationState)) sourceState.addStateForRegex(regexKey, destinationState)
+                if validDestinationStates.contains(destinationState)) sourceState.addStateForRegex(regexKey, destinationState)
           }
         }
       )
@@ -150,7 +142,7 @@ class StateEliminator[T](val nfa: NFA[T]) extends {
     } yield regex
     if(repetitionRegexes.isEmpty) Empty[T]() else
       Star(repetitionRegexes.tail.foldLeft(repetitionRegexes.head)(
-        binOpIgnoringEmpties((a, b) => Union(a, b)) _
+        (a, b) => Union(a, b)
       ))
   }
 
